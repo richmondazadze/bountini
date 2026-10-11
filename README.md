@@ -22,4 +22,4 @@ Set the same DATABASE_URL, SOLANA_RPC_URL and NEXT_PUBLIC_ESCROW_PROGRAM_ID on t
 
 ## Hosting
 
-Vercel web/API, Neon PostgreSQL, Render worker, Porkbun domain bountini.us. The app is live at https://bountini.us. The manual two-wallet Devnet gate passed; Gemini assistance and ElevenLabs voice are enabled. The $7/month Render worker is approved and prepared; payment-card setup and database credential rotation are pending. See docs/build-status.md for operational limits and verification evidence.
+Vercel web/API, Neon PostgreSQL, Render worker, Porkbun domain bountini.us. The app is live at https://bountini.us. The manual two-wallet Devnet gate passed; Gemini assistance and ElevenLabs voice are enabled. The approved $7/month Render reconciliation worker is live in Ohio. The Neon credential has been rotated and updated in both deployments. See docs/build-status.md for operational limits and verification evidence.

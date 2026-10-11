@@ -18,3 +18,5 @@ DEMO_ORIGIN=https://bountini.us DEMO_ASSISTANCE=true node --env-file=.env.local 
 The rehearsal spends test SOL only, asserts exact payout/refund balance deltas, and writes output/devnet-demo.json. It creates public demonstration quests. Do not use a mainnet payer. Authentication/privacy smoke checks use scripts/check-api.ts with the same DEMO_ORIGIN.
 
 A browser microphone walkthrough remains necessary: provider WebSocket audio and text response were tested, but physical microphone speech and ASR were not automated.
+
+To verify the Render worker independently, stop local workers and set DEMO_WORKER_ONLY=true alongside DEMO_ORIGIN. The script waits by reading operation status directly from Neon, without calling the operation reconciliation endpoint after broadcast. Receipts are written to output/render-worker-demo.json.
