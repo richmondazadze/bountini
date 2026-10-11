@@ -1,0 +1,524 @@
+{
+  "address": "DYf6RhzG8RLw3zhoa2C9RDXWkBJ2Qgss9Mnmarbk7fce",
+  "metadata": {
+    "name": "bountini_escrow",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "approve",
+      "discriminator": [69, 74, 217, 36, 115, 117, 97, 76],
+      "accounts": [
+        {
+          "name": "bounty",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [98, 111, 117, 110, 116, 121]
+              },
+              {
+                "kind": "account",
+                "path": "bounty.requester",
+                "account": "Bounty"
+              },
+              {
+                "kind": "account",
+                "path": "bounty.id",
+                "account": "Bounty"
+              }
+            ]
+          }
+        },
+        {
+          "name": "requester",
+          "signer": true,
+          "relations": ["bounty"]
+        },
+        {
+          "name": "worker",
+          "writable": true,
+          "relations": ["bounty"]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel",
+      "discriminator": [232, 219, 223, 41, 219, 236, 220, 190],
+      "accounts": [
+        {
+          "name": "bounty",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [98, 111, 117, 110, 116, 121]
+              },
+              {
+                "kind": "account",
+                "path": "bounty.requester",
+                "account": "Bounty"
+              },
+              {
+                "kind": "account",
+                "path": "bounty.id",
+                "account": "Bounty"
+              }
+            ]
+          }
+        },
+        {
+          "name": "requester",
+          "writable": true,
+          "signer": true,
+          "relations": ["bounty"]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claim",
+      "discriminator": [62, 198, 214, 193, 213, 159, 108, 210],
+      "accounts": [
+        {
+          "name": "bounty",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [98, 111, 117, 110, 116, 121]
+              },
+              {
+                "kind": "account",
+                "path": "bounty.requester",
+                "account": "Bounty"
+              },
+              {
+                "kind": "account",
+                "path": "bounty.id",
+                "account": "Bounty"
+              }
+            ]
+          }
+        },
+        {
+          "name": "worker",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "expire",
+      "discriminator": [243, 83, 205, 58, 57, 201, 247, 146],
+      "accounts": [
+        {
+          "name": "bounty",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [98, 111, 117, 110, 116, 121]
+              },
+              {
+                "kind": "account",
+                "path": "bounty.requester",
+                "account": "Bounty"
+              },
+              {
+                "kind": "account",
+                "path": "bounty.id",
+                "account": "Bounty"
+              }
+            ]
+          }
+        },
+        {
+          "name": "requester",
+          "writable": true,
+          "signer": true,
+          "relations": ["bounty"]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "fund",
+      "discriminator": [218, 188, 111, 221, 152, 113, 174, 7],
+      "accounts": [
+        {
+          "name": "bounty",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [98, 111, 117, 110, 116, 121]
+              },
+              {
+                "kind": "account",
+                "path": "requester"
+              },
+              {
+                "kind": "arg",
+                "path": "id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "requester",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "id",
+          "type": {
+            "array": ["u8", 16]
+          }
+        },
+        {
+          "name": "requirements_hash",
+          "type": {
+            "array": ["u8", 32]
+          }
+        },
+        {
+          "name": "reward",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "reject",
+      "discriminator": [135, 7, 63, 85, 131, 114, 111, 224],
+      "accounts": [
+        {
+          "name": "bounty",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [98, 111, 117, 110, 116, 121]
+              },
+              {
+                "kind": "account",
+                "path": "bounty.requester",
+                "account": "Bounty"
+              },
+              {
+                "kind": "account",
+                "path": "bounty.id",
+                "account": "Bounty"
+              }
+            ]
+          }
+        },
+        {
+          "name": "requester",
+          "writable": true,
+          "signer": true,
+          "relations": ["bounty"]
+        }
+      ],
+      "args": [
+        {
+          "name": "feedback_hash",
+          "type": {
+            "array": ["u8", 32]
+          }
+        }
+      ]
+    },
+    {
+      "name": "request_revision",
+      "discriminator": [205, 195, 75, 171, 242, 149, 90, 14],
+      "accounts": [
+        {
+          "name": "bounty",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [98, 111, 117, 110, 116, 121]
+              },
+              {
+                "kind": "account",
+                "path": "bounty.requester",
+                "account": "Bounty"
+              },
+              {
+                "kind": "account",
+                "path": "bounty.id",
+                "account": "Bounty"
+              }
+            ]
+          }
+        },
+        {
+          "name": "requester",
+          "writable": true,
+          "signer": true,
+          "relations": ["bounty"]
+        }
+      ],
+      "args": [
+        {
+          "name": "feedback_hash",
+          "type": {
+            "array": ["u8", 32]
+          }
+        }
+      ]
+    },
+    {
+      "name": "submit",
+      "discriminator": [88, 166, 102, 181, 162, 127, 170, 48],
+      "accounts": [
+        {
+          "name": "bounty",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [98, 111, 117, 110, 116, 121]
+              },
+              {
+                "kind": "account",
+                "path": "bounty.requester",
+                "account": "Bounty"
+              },
+              {
+                "kind": "account",
+                "path": "bounty.id",
+                "account": "Bounty"
+              }
+            ]
+          }
+        },
+        {
+          "name": "worker",
+          "signer": true,
+          "relations": ["bounty"]
+        }
+      ],
+      "args": [
+        {
+          "name": "content_hash",
+          "type": {
+            "array": ["u8", 32]
+          }
+        }
+      ]
+    },
+    {
+      "name": "withdraw",
+      "discriminator": [183, 18, 70, 156, 148, 109, 161, 34],
+      "accounts": [
+        {
+          "name": "bounty",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [98, 111, 117, 110, 116, 121]
+              },
+              {
+                "kind": "account",
+                "path": "bounty.requester",
+                "account": "Bounty"
+              },
+              {
+                "kind": "account",
+                "path": "bounty.id",
+                "account": "Bounty"
+              }
+            ]
+          }
+        },
+        {
+          "name": "worker",
+          "signer": true,
+          "relations": ["bounty"]
+        },
+        {
+          "name": "requester",
+          "writable": true,
+          "relations": ["bounty"]
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Bounty",
+      "discriminator": [237, 16, 105, 198, 19, 69, 242, 234]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidReward",
+      "msg": "Reward must be positive"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidHash",
+      "msg": "Hash must not be empty"
+    },
+    {
+      "code": 6002,
+      "name": "WrongState",
+      "msg": "Action is not allowed in this state"
+    },
+    {
+      "code": 6003,
+      "name": "AlreadyClaimed",
+      "msg": "A worker already claimed this bounty"
+    },
+    {
+      "code": 6004,
+      "name": "SelfClaim",
+      "msg": "Requester cannot claim their own bounty"
+    },
+    {
+      "code": 6005,
+      "name": "DeadlineReached",
+      "msg": "Deadline has been reached"
+    },
+    {
+      "code": 6006,
+      "name": "RevisionUsed",
+      "msg": "The revision has already been used"
+    },
+    {
+      "code": 6007,
+      "name": "AlreadySettled",
+      "msg": "Settlement already occurred"
+    },
+    {
+      "code": 6008,
+      "name": "TooEarly",
+      "msg": "Expiry is not yet available"
+    },
+    {
+      "code": 6009,
+      "name": "Overflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6010,
+      "name": "InsufficientEscrow",
+      "msg": "Escrow does not hold the reward and rent"
+    }
+  ],
+  "types": [
+    {
+      "name": "Bounty",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": {
+              "array": ["u8", 16]
+            }
+          },
+          {
+            "name": "requester",
+            "type": "pubkey"
+          },
+          {
+            "name": "worker",
+            "type": "pubkey"
+          },
+          {
+            "name": "requirements_hash",
+            "type": {
+              "array": ["u8", 32]
+            }
+          },
+          {
+            "name": "reward",
+            "type": "u64"
+          },
+          {
+            "name": "state",
+            "type": {
+              "defined": {
+                "name": "State"
+              }
+            }
+          },
+          {
+            "name": "deadline",
+            "type": "i64"
+          },
+          {
+            "name": "revision_used",
+            "type": "bool"
+          },
+          {
+            "name": "submission_hash",
+            "type": {
+              "array": ["u8", 32]
+            }
+          },
+          {
+            "name": "feedback_hash",
+            "type": {
+              "array": ["u8", 32]
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "State",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Open"
+          },
+          {
+            "name": "InProgress"
+          },
+          {
+            "name": "InReview"
+          },
+          {
+            "name": "RevisionRequested"
+          },
+          {
+            "name": "Paid"
+          },
+          {
+            "name": "Refunded"
+          }
+        ]
+      }
+    }
+  ]
+}

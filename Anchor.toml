@@ -1,0 +1,10 @@
+[toolchain]
+anchor_version = "0.32.1"
+solana_version = "2.3.0"
+[programs.localnet]
+bountini_escrow = "DYf6RhzG8RLw3zhoa2C9RDXWkBJ2Qgss9Mnmarbk7fce"
+[programs.devnet]
+bountini_escrow = "DYf6RhzG8RLw3zhoa2C9RDXWkBJ2Qgss9Mnmarbk7fce"
+[provider]
+cluster = "Localnet"
+wallet = "~/.config/solana/id.json"

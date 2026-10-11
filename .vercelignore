@@ -1,0 +1,15 @@
+tmp
+output
+target
+.anchor
+.git
+design
+design-v2
+*.zip
+programs
+tests
+scripts
+Cargo.lock
+Cargo.toml
+Anchor.toml
+.env.local

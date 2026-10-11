@@ -1,0 +1,2 @@
+CREATE TABLE IF NOT EXISTS assistance_usage (wallet text NOT NULL, kind text NOT NULL, day date NOT NULL DEFAULT current_date, used integer NOT NULL DEFAULT 0, PRIMARY KEY(wallet,kind,day));
+CREATE TABLE IF NOT EXISTS ai_reviews (id uuid PRIMARY KEY, bounty_id uuid NOT NULL REFERENCES bounties(id), submission_hash text NOT NULL, requirements_hash text NOT NULL, model text NOT NULL, prompt_version text NOT NULL, result jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now());

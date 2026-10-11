@@ -1,0 +1,34 @@
+name: Bountini checks
+on: [push, pull_request]
+jobs:
+  application:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+  escrow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: npm ci
+      - name: Install pinned Solana toolchain
+        run: |
+          curl -sSfL https://release.anza.xyz/v2.3.0/install -o /tmp/solana-install.sh
+          sh /tmp/solana-install.sh --no-modify-path v2.3.0
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+      - run: cargo build-sbf --manifest-path programs/escrow/Cargo.toml --sbf-out-dir target/deploy
+      - run: cargo test --locked -p bountini-escrow
+      - run: npm test
