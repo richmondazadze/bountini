@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { accountHref } from "@/client/account-flow";
 import { useAccount } from "./account-provider";
 import { api } from "./header";
 import { Button, Banner } from "./ui";
@@ -125,7 +126,8 @@ export function Workroom({
       <section className="workroom">
         <h2>Quest workroom</h2>
         <p>
-          <Link href="/account">Sign in</Link> to access participant messages.
+          <Link href={accountHref(`/bounties/${id}`, "worker")}>Sign in</Link>{" "}
+          to access participant messages.
         </p>
       </section>
     );

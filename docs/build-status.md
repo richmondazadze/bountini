@@ -77,3 +77,11 @@ Browser microphone interaction remains a human walkthrough from the earlier rele
 Hosted UI communication check: the controlled Requester sent a message through the workroom form; the controlled Worker retrieved that reply through its own authenticated session and sent a new message. The Requester’s active browser received the Worker’s new message without a manual refresh. The mobile screen was reviewed at 390×844, including an explicit Devnet badge. Test screenshots are under output/ and are not part of the deployment.
 
 Final production deployment: dpl_HevYTYL819XPwG9Kf39N4ofZFNcg, aliased to https://bountini.us. An actual hosted signup queued its verification email, and Resend showed that message as delivered to its documented test recipient. The controlled signup account was removed. Final hosted health returned 200 with accounts, email, database, escrow, AI and voice configured on Devnet.
+
+## Account-first onboarding fixes — 2026-10-11
+
+Resolved the requester/worker flow audit: verified email account required before opening the private quest editor or wallet selector. Active matching wallet verification gates saving, assistance and escrow controls. Signup/login/resend-verification preserve an allowlisted destination and optional dashboard role. Guest review and workroom links preserve the chosen quest. Wallet connection, ownership verification and email sign-in use distinct labels. Assistance reports actual errors and ends voice sessions when wallet access is lost.
+
+66 tests, TypeScript and production build passed. Real Better Auth/Neon verification preserved requester intent and /create through the verification redirect; recovery and session-revocation checks passed. Hosted browser requester login returned to /create with requester preference saved, and saving stayed disabled without wallet proof after accepting agreement. No escrow transaction was performed. Production deployment: dpl_5U48CvEjFvzBy98PmHVBXxLfxaLr. Detailed findings and fixes: docs/audits/account-flow-2026-10-11.md.
+
+Hosted worker continuation passed: signing in from the selected quest returned to that exact quest and persisted Worker preference. Signing out restored the guest account gate and hid wallet controls. Controlled QA account removed. Wallet-access race tests deny stale verification after an account switch and clear access on sign-out.

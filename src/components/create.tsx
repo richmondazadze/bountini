@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { useWalletAccess } from "./wallet-access";
+import { accountHref } from "@/client/account-flow";
 import { useAccount } from "./account-provider";
 import { useEffect, useState } from "react";
 import { useWalletConnection } from "@solana/react-hooks";
@@ -42,12 +44,28 @@ export function Create() {
         Loading your account…
       </div>
     );
-  return <CreateForm key={me?.user.id || "guest"} />;
+  if (!me)
+    return (
+      <div className="page account-page">
+        <h1>Sign in to post a quest.</h1>
+        <p>
+          Create and verify your account before preparing your private brief.
+        </p>
+        <Link
+          className="button primary"
+          href={accountHref("/create", "requester")}
+        >
+          Sign in or create an account
+        </Link>
+      </div>
+    );
+  return <CreateForm key={me.user.id} />;
 }
 function CreateForm() {
   const router = useRouter();
   const { me } = useAccount();
   const { wallet } = useWalletConnection();
+  const walletReady = useWalletAccess();
   const [draft, setDraft] = useState<Draft>(empty);
   const [loaded, setLoaded] = useState(false);
   const draftKey = `bountini.draft.v2:${me?.user.id || "guest"}`;
@@ -152,6 +170,12 @@ function CreateForm() {
                 before saving a quest. You can prepare your draft here.
               </Banner>
             )}
+            {me && !walletReady && (
+              <Banner>
+                Use “Connect wallet” in the header, then sign the ownership
+                message before saving your quest. No SOL is charged for linking.
+              </Banner>
+            )}
             {error && <Banner error>{error}</Banner>}
             {review ? (
               <>
@@ -188,7 +212,11 @@ function CreateForm() {
                   </span>
                 </label>
                 <div className="actions">
-                  <Button pending={pending} disabled={!agree} onClick={save}>
+                  <Button
+                    pending={pending}
+                    disabled={!agree || !walletReady}
+                    onClick={save}
+                  >
                     {pending ? "Saving quest…" : "Save & continue to funding"}
                   </Button>
                   <Button

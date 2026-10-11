@@ -1,3 +1,4 @@
+import { accountHref } from "../src/client/account-flow";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { betterAuth } from "better-auth";
@@ -61,7 +62,7 @@ try {
     email,
     password,
     name: "Account QA",
-    callbackURL: "/my",
+    callbackURL: accountHref("/create", "requester"),
   });
   assert.equal(signup.status, 200);
   userId = (await signup.json()).user.id;
@@ -75,6 +76,20 @@ try {
     }),
   );
   assert(verified.status < 400);
+  assert.equal(
+    new URL(
+      verified.headers.get("location")!,
+      "http://localhost:3001",
+    ).searchParams.get("next"),
+    "/create",
+  );
+  assert.equal(
+    new URL(
+      verified.headers.get("location")!,
+      "http://localhost:3001",
+    ).searchParams.get("role"),
+    "requester",
+  );
   const firstCookie = cookie(verified);
   assert(firstCookie);
   const session = await req("get-session", undefined, firstCookie);

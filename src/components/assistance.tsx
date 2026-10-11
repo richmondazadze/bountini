@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useWalletAccess } from "./wallet-access";
 import { Conversation } from "@elevenlabs/client";
 import type { Draft } from "@/domain/bounty";
 import { api } from "./header";
@@ -10,6 +11,7 @@ export function DraftAssistant({
 }: {
   onApply: (proposal: Proposal) => void;
 }) {
+  const walletReady = useWalletAccess();
   const [text, setText] = useState("");
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [error, setError] = useState("");
@@ -42,7 +44,14 @@ export function DraftAssistant({
     setStatus("disconnected");
     setMuted(false);
   }
+  useEffect(() => {
+    if (!walletReady) void stop();
+  }, [walletReady]);
   async function start() {
+    if (!walletReady) {
+      setError("Connect and verify your wallet in the header first.");
+      return;
+    }
     setError("");
     setStatus("connecting");
     const attempt = ++generation.current;
@@ -51,6 +60,7 @@ export function DraftAssistant({
         "/api/voice/session",
         { method: "POST" },
       );
+      if (generation.current !== attempt) return;
       const active = await Conversation.startSession({
         signedUrl,
         connectionType: "websocket",
@@ -81,14 +91,20 @@ export function DraftAssistant({
         return;
       }
       session.current = active;
-    } catch {
+    } catch (e) {
       setStatus("disconnected");
       setError(
-        "Microphone permission or voice connection failed. Continue by typing.",
+        e instanceof Error
+          ? e.message
+          : "Microphone permission or voice connection failed. Continue by typing.",
       );
     }
   }
   async function suggest() {
+    if (!walletReady) {
+      setError("Connect and verify your wallet in the header first.");
+      return;
+    }
     setPending(true);
     setError("");
     await stop();
@@ -112,10 +128,11 @@ export function DraftAssistant({
     <section className="panel" style={{ marginBottom: 24 }}>
       <h3>Build a clearer brief</h3>
       <p className="helper">
-        Optional assistance. Sign in with your wallet first. Voice sends audio
-        to ElevenLabs; generating a proposal sends this text to Gemini. The
-        transcript stays in this screen until you apply or clear it. Provider
-        retention depends on your account settings.
+        Optional assistance. Sign in with your verified email account, then
+        connect and verify your wallet. Voice sends audio to ElevenLabs;
+        generating a proposal sends this text to Gemini. The transcript stays in
+        this screen until you apply or clear it. Provider retention depends on
+        your account settings.
       </p>
       {error && <Banner error>{error}</Banner>}
       <div className="field">
@@ -137,7 +154,7 @@ export function DraftAssistant({
           <Button
             type="button"
             variant="secondary"
-            disabled={!enabled.voiceEnabled || pending}
+            disabled={!walletReady || !enabled.voiceEnabled || pending}
             onClick={start}
           >
             <Icon name="mic" />
@@ -163,7 +180,9 @@ export function DraftAssistant({
         )}
         <Button
           type="button"
-          disabled={!enabled.aiEnabled || text.trim().length < 20}
+          disabled={
+            !walletReady || !enabled.aiEnabled || text.trim().length < 20
+          }
           pending={pending}
           onClick={suggest}
         >
@@ -221,6 +240,7 @@ export function DraftAssistant({
   );
 }
 export function AdvisoryReview({ bountyId }: { bountyId: string }) {
+  const walletReady = useWalletAccess();
   const [result, setResult] = useState<{
     summary: string;
     criteria: {
@@ -234,6 +254,7 @@ export function AdvisoryReview({ bountyId }: { bountyId: string }) {
   const [error, setError] = useState("");
   const [trace, setTrace] = useState("");
   async function review() {
+    if (!walletReady) return;
     setPending(true);
     setError("");
     try {
@@ -264,10 +285,17 @@ export function AdvisoryReview({ bountyId }: { bountyId: string }) {
         You decide approval, revision or rejection. The review deadline
         continues while AI runs.
       </p>
+      {!walletReady && (
+        <p className="helper">
+          Connect and verify your participant wallet in the header to request AI
+          review.
+        </p>
+      )}
       <Button
         type="button"
         variant="secondary"
         pending={pending}
+        disabled={!walletReady}
         onClick={review}
       >
         Review against checklist

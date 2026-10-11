@@ -3,6 +3,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const m = vi.hoisted(() => ({
+  authenticated: true,
   wallet: null as null | {
     account: { address: string };
     connector: { id: string; name: string };
@@ -20,7 +21,7 @@ vi.mock("@solana/react-hooks", () => ({
 }));
 vi.mock("../src/components/account-provider", () => ({
   useAccount: () => ({
-    me: { user: { id: "test-user", name: "Test" } },
+    me: m.authenticated ? { user: { id: "test-user", name: "Test" } } : null,
     loading: false,
   }),
 }));
@@ -48,6 +49,7 @@ const wallet = (address: string) => ({
   signMessage: vi.fn(async () => new Uint8Array(64)),
 });
 beforeEach(() => {
+  m.authenticated = true;
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true, React });
   host = document.createElement("div");
   document.body.append(host);
@@ -139,4 +141,17 @@ it("clears an old sign-in that finishes after switching accounts", async () => {
   expect(host.textContent).not.toContain(
     "Wallet linked and verified for escrow",
   );
+});
+
+it("hides the connector selector from guests even when a wallet is already connected", async () => {
+  m.authenticated = false;
+  m.wallet = wallet("AAAA1111");
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json({ error: "Sign in" }, { status: 401 })),
+  );
+  await render();
+  expect(host.querySelector("header button")).toBeNull();
+  expect(host.textContent).not.toContain("Link wallet");
+  expect(host.textContent).toContain("Sign in");
 });

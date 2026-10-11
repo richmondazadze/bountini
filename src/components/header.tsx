@@ -17,7 +17,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 export function Header() {
   const path = usePathname();
-  const { me } = useAccount();
+  const { me, loading } = useAccount();
   const { connectors, connect, disconnect, wallet, status } =
     useWalletConnection();
   const [open, setOpen] = useState(false);
@@ -25,7 +25,7 @@ export function Header() {
   const [pending, setPending] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const address = wallet?.account.address;
-  const identity = `${wallet?.connector.id || ""}:${address || ""}`;
+  const identity = `${me?.user.id || ""}:${wallet?.connector.id || ""}:${address || ""}`;
   const identityRef = useRef(identity);
   identityRef.current = identity;
   const sessionSync = useRef<Promise<void>>(Promise.resolve());
@@ -56,7 +56,11 @@ export function Header() {
       cancelled = true;
     };
   }, [identity, address, me?.user.id]);
+  useEffect(() => {
+    if (!me) setOpen(false);
+  }, [me?.user.id]);
   async function signIn() {
+    if (!me || loading) return;
     if (!wallet?.signMessage) {
       setError(
         "This wallet does not support message signing. Use a compatible wallet.",
@@ -71,7 +75,7 @@ export function Header() {
       .catch(() => {})
       .then(async () => {
         if (identityRef.current !== signingIdentity)
-          throw new Error("Wallet changed. Sign in with the current account.");
+          throw new Error("Wallet changed. Verify the current wallet.");
         const c = await api<{ id: string; message: string }>(
           "/api/auth/challenge",
           { method: "POST", body: JSON.stringify({ wallet: address }) },
@@ -92,7 +96,11 @@ export function Header() {
     try {
       await attempt;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Sign-in was not completed");
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Wallet verification was not completed",
+      );
     } finally {
       setPending(false);
     }
@@ -133,21 +141,23 @@ export function Header() {
             <span className="network">
               <span aria-hidden="true">●</span> Devnet
             </span>
-            <Button
-              variant="secondary"
-              size="compact"
-              onClick={() => setOpen(true)}
-            >
-              <Icon name="wallet" />
-              {address
-                ? `${address.slice(0, 4)}…${address.slice(-4)}`
-                : "Connect wallet"}
-            </Button>
+            {me && !loading && (
+              <Button
+                variant="secondary"
+                size="compact"
+                onClick={() => setOpen(true)}
+              >
+                <Icon name="wallet" />
+                {address
+                  ? `${address.slice(0, 4)}…${address.slice(-4)}`
+                  : "Connect wallet"}
+              </Button>
+            )}
           </div>
         </div>
       </header>
       <Dialog
-        open={open}
+        open={open && Boolean(me) && !loading}
         onClose={() => setOpen(false)}
         title={address ? "Your wallet" : "Connect a wallet"}
       >
@@ -176,7 +186,7 @@ export function Header() {
               {pending
                 ? "Waiting for wallet…"
                 : signedIn
-                  ? "Signed in"
+                  ? "Wallet verified"
                   : "Link wallet"}
             </Button>
             <Button

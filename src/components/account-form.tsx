@@ -1,11 +1,20 @@
 "use client";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/client/account";
 import { Button, Banner } from "./ui";
 import { useAccount } from "./account-provider";
-export function AccountForm({ resetToken }: { resetToken?: string }) {
+import { accountHref, type AccountRole } from "@/client/account-flow";
+export function AccountForm({
+  resetToken,
+  destination,
+  intendedRole,
+}: {
+  resetToken?: string;
+  destination?: string;
+  intendedRole?: AccountRole;
+}) {
   const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -15,6 +24,34 @@ export function AccountForm({ resetToken }: { resetToken?: string }) {
   const [notice, setNotice] = useState("");
   const router = useRouter();
   const { me, refresh } = useAccount();
+  const continued = useRef(false);
+  const callbackURL = destination
+    ? accountHref(destination, intendedRole)
+    : "/my";
+  async function continueAccount() {
+    if (intendedRole) {
+      const response = await fetch("/api/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activeRole: intendedRole }),
+      });
+      if (!response.ok)
+        throw new Error(
+          "Unable to save your dashboard preference. Please retry.",
+        );
+      await refresh();
+    }
+    router.push(destination || "/my");
+    router.refresh();
+  }
+  useEffect(() => {
+    if (!me || !destination || resetToken || continued.current) return;
+    continued.current = true;
+    void continueAccount().catch((e) => {
+      setError(e.message);
+      continued.current = false;
+    });
+  }, [me?.user.id, destination, resetToken]);
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError("");
@@ -31,7 +68,7 @@ export function AccountForm({ resetToken }: { resetToken?: string }) {
               email,
               password,
               name,
-              callbackURL: "/my",
+              callbackURL,
             })
           : mode === "forgot"
             ? await authClient.requestPasswordReset({
@@ -41,7 +78,7 @@ export function AccountForm({ resetToken }: { resetToken?: string }) {
             : await authClient.signIn.email({
                 email,
                 password,
-                callbackURL: "/my",
+                callbackURL,
               });
       if (result.error)
         throw new Error(
@@ -61,8 +98,7 @@ export function AccountForm({ resetToken }: { resetToken?: string }) {
       } else {
         await refresh();
         window.dispatchEvent(new Event("bountini-auth-change"));
-        router.push("/my");
-        router.refresh();
+        if (!destination) await continueAccount();
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Please try again");
@@ -74,9 +110,30 @@ export function AccountForm({ resetToken }: { resetToken?: string }) {
     return (
       <div className="page account-page">
         <h1>Welcome, {me.user.name}.</h1>
-        <Link className="button primary" href="/my">
-          Open your dashboard
-        </Link>
+        {error && <Banner error>{error}</Banner>}
+        {destination ? (
+          <Button
+            pending={pending}
+            onClick={async () => {
+              setPending(true);
+              setError("");
+              try {
+                await continueAccount();
+              } catch (e) {
+                setError(e instanceof Error ? e.message : "Please retry");
+              } finally {
+                setPending(false);
+              }
+            }}
+          >
+            Continue to{" "}
+            {destination === "/create" ? "your quest" : "your selected page"}
+          </Button>
+        ) : (
+          <Link className="button primary" href="/my">
+            Open your dashboard
+          </Link>
+        )}
       </div>
     );
   return (
@@ -198,7 +255,7 @@ export function AccountForm({ resetToken }: { resetToken?: string }) {
             try {
               const r = await authClient.sendVerificationEmail({
                 email,
-                callbackURL: "/my",
+                callbackURL,
               });
               if (r.error) throw new Error(r.error.message);
               setNotice(

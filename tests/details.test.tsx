@@ -14,6 +14,9 @@ vi.mock("../src/components/account-provider", () => ({
     me: { user: { id: "qa" }, wallets: [{ wallet: mocks.actor }] },
   }),
 }));
+vi.mock("../src/components/wallet-access", () => ({
+  useWalletAccess: () => true,
+}));
 vi.mock("../src/components/workroom", () => ({ Workroom: () => null }));
 vi.mock("../src/components/header", () => ({ api: mocks.api }));
 vi.mock("../src/components/assistance", () => ({

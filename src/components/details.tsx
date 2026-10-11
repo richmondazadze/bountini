@@ -1,8 +1,10 @@
 "use client";
+import { useWalletAccess } from "./wallet-access";
 import { Workroom } from "./workroom";
 import { useAccount } from "./account-provider";
 import { AdvisoryReview } from "./assistance";
 import Link from "next/link";
+import { accountHref } from "@/client/account-flow";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWalletConnection, useSolanaClient } from "@solana/react-hooks";
 import {
@@ -36,6 +38,7 @@ export function Details(props: { id: string; review?: boolean }) {
 }
 function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
   const { wallet } = useWalletConnection();
+  const walletReady = useWalletAccess();
   const client = useSolanaClient();
   const { me } = useAccount();
   const [b, setB] = useState<Bounty | null>(null);
@@ -241,7 +244,7 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
       const session = await api<{ wallet: string }>("/api/auth/session");
       if (session.wallet !== actor)
         throw new Error(
-          "Sign in with your connected wallet before continuing.",
+          "Verify your connected wallet in the header before continuing.",
         );
       const prepared = await api<{
         operationId: string;
@@ -369,6 +372,7 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
   const allowed = (action: Parameters<typeof canAct>[1]) =>
     Boolean(
       me &&
+      walletReady &&
       !(action === "claim" && requester) &&
       actor &&
       me.wallets.some((w) => w.wallet === actor) &&
@@ -418,8 +422,10 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
         </div>
         {!me && (
           <Banner>
-            <Link href="/account">Sign in or create an account</Link> to post,
-            claim or communicate.
+            <Link href={accountHref(`/bounties/${id}`, "worker")}>
+              Sign in or create an account
+            </Link>{" "}
+            to post, claim or communicate.
           </Banner>
         )}
         {me && (!actor || !me.wallets.some((w) => w.wallet === actor)) && (
@@ -607,10 +613,15 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
               </>
             ) : (
               <Link
-                href={`/bounties/${id}/review`}
+                href={
+                  me
+                    ? `/bounties/${id}/review`
+                    : accountHref(`/bounties/${id}/review`, "worker")
+                }
                 className="button secondary"
               >
-                Open submit & review <Icon name="arrow" />
+                {me ? "Open submit & review" : "Sign in to submit or review"}{" "}
+                <Icon name="arrow" />
               </Link>
             )}
             <section>
@@ -684,6 +695,7 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
                 disabled={
                   disabled ||
                   !configured ||
+                  !walletReady ||
                   actor !== b.requester ||
                   !me?.wallets.some((w) => w.wallet === actor)
                 }
