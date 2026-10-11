@@ -16,7 +16,10 @@ export async function GET(
       throw new HttpError(403, "Only participants can view submissions");
     const submissions =
       await sql`SELECT body,revision,created_at FROM submissions WHERE bounty_id=${id} AND confirmed=true ORDER BY revision`;
-    return Response.json({ submissions });
+    return Response.json(
+      { submissions },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
   } catch (e) {
     return failure(e);
   }

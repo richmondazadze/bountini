@@ -131,6 +131,17 @@ async function act(id: string, w: Wallet, action: string, content?: string) {
     action,
     content,
   });
+  if (
+    process.env.DEMO_REVISION === "true" &&
+    ["revise", "reject"].includes(action)
+  ) {
+    const before = (await api(`/api/bounties/${id}/feedback`, worker)).json
+      .feedback;
+    assert(
+      !before.some((item: { feedback: string }) => item.feedback === content),
+      "Unconfirmed feedback must remain private",
+    );
+  }
   const tx = await signed(
     w,
     {
@@ -184,6 +195,7 @@ async function draft(title: string) {
   return json.bounty.id as string;
 }
 const id = await draft("Devnet demonstration: Spanish announcement");
+console.log(`Demonstration quest: ${id}`);
 await act(id, requester, "fund");
 await act(id, worker, "claim");
 await act(
@@ -192,6 +204,52 @@ await act(
   "submit",
   "La reunión de la comunidad comienza a las 10 a. m. el sábado.",
 );
+if (process.env.DEMO_REVISION === "true") {
+  const instructions =
+    "Keep the original meeting time; replace comienza with empieza.";
+  await act(id, requester, "revise", instructions);
+  for (const participant of [requester, worker]) {
+    const response = await api(`/api/bounties/${id}/feedback`, participant);
+    assert.equal(response.json.feedback.at(-1).feedback, instructions);
+    assert.equal(response.r.headers.get("cache-control"), "private, no-store");
+  }
+  assert.equal(
+    (await api(`/api/bounties/${id}`, worker)).json.bounty.status,
+    "revision-requested",
+  );
+  const outsider = await wallet();
+  await login(outsider);
+  const forbidden = await fetch(`${origin}/api/bounties/${id}/feedback`, {
+    headers: { Cookie: outsider.cookie },
+  });
+  assert.equal(forbidden.status, 403);
+  const anonymous = await fetch(`${origin}/api/bounties/${id}/feedback`);
+  assert.equal(anonymous.status, 401);
+  await act(
+    id,
+    worker,
+    "submit",
+    "La reunión de la comunidad empieza a las 10 a. m. el sábado.",
+  );
+  const versions = (await api(`/api/bounties/${id}/submissions`, requester))
+    .json.submissions;
+  assert.equal(versions.length, 2);
+  assert.equal(versions[1].revision, 1);
+  assert(versions[1].body.includes("empieza"));
+  await act(
+    id,
+    requester,
+    "reject",
+    "Rejection recorded for demonstration; approval remains available.",
+  );
+  assert.equal(
+    (await api(`/api/bounties/${id}/feedback`, worker)).json.feedback.length,
+    2,
+  );
+  console.log(
+    "Confirmed revision/rejection feedback, pending exclusion, participant privacy and revised content verified.",
+  );
+}
 const workerBefore = (
   await rpc
     .getBalance(worker.signer.address, { commitment: "finalized" })
@@ -237,12 +295,17 @@ assert.equal(
   "refunded",
 );
 writeFileSync(
-  demoDatabase ? "output/render-worker-demo.json" : "output/devnet-demo.json",
+  process.env.DEMO_REVISION === "true"
+    ? "output/revision-feedback-demo.json"
+    : demoDatabase
+      ? "output/render-worker-demo.json"
+      : "output/devnet-demo.json",
   JSON.stringify(
     {
       network: "devnet",
       appOrigin: origin,
       backgroundWorkerOnly: !!demoDatabase,
+      revisionFeedbackVerified: process.env.DEMO_REVISION === "true",
       verifiedPayoutLamports: "1000000",
       verifiedRefundNetLamports: "995000",
       requester: requester.signer.address,

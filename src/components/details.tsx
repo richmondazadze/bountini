@@ -1,7 +1,7 @@
 "use client";
 import { AdvisoryReview } from "./assistance";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useWalletConnection, useSolanaClient } from "@solana/react-hooks";
 import {
   address,
@@ -54,50 +54,103 @@ export function Details({
     { action: string; signature: string; updated_at: string }[]
   >([]);
   const actor = wallet?.account.address;
-  const load = useCallback(async () => {
-    setError("");
-    try {
-      const r = await api<{ bounty: Bounty; serverTime: number }>(
-        `/api/bounties/${id}`,
-      );
-      setB(r.bounty);
-      api<{ activity: typeof activity }>(`/api/bounties/${id}/activity`)
-        .then((r) => setActivity(r.activity))
-        .catch(() => {});
-      setServerTime(r.serverTime);
-      setClockOffset(r.serverTime - Date.now());
+  const [authVersion, setAuthVersion] = useState(0);
+  const refreshSequence = useRef(0);
+  const load = useCallback(
+    async (quiet = false) => {
+      const sequence = ++refreshSequence.current;
+      if (!quiet) setError("");
       try {
-        const ops = await api<{
-          operations: {
-            id: string;
-            status: TransactionStatus;
-            signature?: string;
-          }[];
-        }>(`/api/bounties/${id}/operations`);
-        const active = ops.operations.find(
-          (o) => !["confirmed", "rejected", "failed"].includes(o.status),
+        const r = await api<{ bounty: Bounty; serverTime: number }>(
+          `/api/bounties/${id}`,
+          { cache: "no-store" },
         );
-        if (active) setOperation(active);
-      } catch {}
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Quest could not be loaded");
-    } finally {
-      setLoading(false);
-    }
-  }, [id, actor]);
+        if (sequence !== refreshSequence.current) return;
+        setB(r.bounty);
+        api<{ activity: typeof activity }>(`/api/bounties/${id}/activity`)
+          .then((r) => {
+            if (sequence === refreshSequence.current) setActivity(r.activity);
+          })
+          .catch(() => {});
+        setServerTime(r.serverTime);
+        setClockOffset(r.serverTime - Date.now());
+        if (!quiet)
+          try {
+            const ops = await api<{
+              operations: {
+                id: string;
+                status: TransactionStatus;
+                signature?: string;
+              }[];
+            }>(`/api/bounties/${id}/operations`);
+            const active = ops.operations.find(
+              (o) => !["confirmed", "rejected", "failed"].includes(o.status),
+            );
+            if (active && sequence === refreshSequence.current)
+              setOperation(active);
+          } catch {}
+      } catch (e) {
+        if (!quiet && sequence === refreshSequence.current)
+          setError(
+            e instanceof Error ? e.message : "Quest could not be loaded",
+          );
+      } finally {
+        if (sequence === refreshSequence.current) setLoading(false);
+      }
+    },
+    [id, actor],
+  );
   useEffect(() => {
     void load();
     const refocus = () => void load();
     window.addEventListener("focus", refocus);
-    window.addEventListener("bountini-auth-change",refocus);
+    const authChange = () => {
+      setAuthVersion((version) => version + 1);
+      void load();
+    };
+    window.addEventListener("bountini-auth-change", authChange);
     try {
       const saved = localStorage.getItem(`bountini.operation.${id}`);
       if (saved) setOperation(JSON.parse(saved));
       const draft = localStorage.getItem(`bountini.submission.${id}`);
       if (draft) setText(draft);
     } catch {}
-    return () => {window.removeEventListener("focus", refocus);window.removeEventListener("bountini-auth-change",refocus);};
+    return () => {
+      refreshSequence.current++;
+      window.removeEventListener("focus", refocus);
+      window.removeEventListener("bountini-auth-change", authChange);
+    };
   }, [id, load]);
+  useEffect(() => {
+    if (!b || ["paid", "refunded"].includes(b.status)) return;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout>;
+    let running = false;
+    const refresh = async () => {
+      if (running || stopped) return;
+      clearTimeout(timer);
+      running = true;
+      try {
+        if (document.visibilityState === "visible" && navigator.onLine)
+          await load(true);
+      } finally {
+        running = false;
+        if (!stopped) timer = setTimeout(refresh, 5000);
+      }
+    };
+    const resume = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    timer = setTimeout(refresh, 5000);
+    document.addEventListener("visibilitychange", resume);
+    window.addEventListener("online", resume);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", resume);
+      window.removeEventListener("online", resume);
+    };
+  }, [b?.status, load]);
   useEffect(() => {
     const timer = setInterval(() => setClock(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -159,8 +212,11 @@ export function Details({
     let opId: string | undefined;
     let txSignature: string | undefined;
     try {
-      const session=await api<{wallet:string}>("/api/auth/session");
-      if(session.wallet!==actor)throw new Error("Sign in with your connected wallet before continuing.");
+      const session = await api<{ wallet: string }>("/api/auth/session");
+      if (session.wallet !== actor)
+        throw new Error(
+          "Sign in with your connected wallet before continuing.",
+        );
       const prepared = await api<{
         operationId: string;
         lifetime: { blockhash: string; lastValidBlockHeight: string };
@@ -264,7 +320,7 @@ export function Details({
     return (
       <div className="page">
         <Banner error>{error || "Quest not found"}</Banner>
-        <Button variant="secondary" onClick={load}>
+        <Button variant="secondary" onClick={() => void load()}>
           Retry
         </Button>
       </div>
@@ -278,6 +334,14 @@ export function Details({
   const now = Math.floor((clock + clockOffset) / 1000);
   const allowed = (action: Parameters<typeof canAct>[1]) =>
     Boolean(actor && canAct(b, action, actor, now));
+  const submissionVersion = activity
+    .filter((event) => event.action === "submit")
+    .map((event) => event.signature)
+    .join(":");
+  const feedbackVersion = activity
+    .filter((event) => ["revise", "reject"].includes(event.action))
+    .map((event) => event.signature)
+    .join(":");
   const configured = Boolean(process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID);
   return (
     <Enter>
@@ -358,6 +422,12 @@ export function Details({
             )}
             {review ? (
               <>
+                {(worker || requester) && (
+                  <ConfirmedFeedback
+                    key={`${id}:${actor}:${authVersion}:${feedbackVersion}:${b.status}`}
+                    id={id}
+                  />
+                )}
                 {worker &&
                   ["in-progress", "revision-requested"].includes(b.status) && (
                     <section className="panel">
@@ -393,11 +463,17 @@ export function Details({
                       </Button>
                     </section>
                   )}
-                {b.status === "in-review" && (
+                {(worker || requester) && b.status === "in-review" && (
                   <section className="panel">
                     <h2>Review the work</h2>
-                    <Submission id={id} />
-                    <AdvisoryReview bountyId={id} />
+                    <Submission
+                      key={`${id}:${actor}:${authVersion}:${submissionVersion}`}
+                      id={id}
+                    />
+                    <AdvisoryReview
+                      key={`${id}:${actor}:${authVersion}:${submissionVersion}`}
+                      bountyId={id}
+                    />
                     {requester && (
                       <>
                         <div className="field">
@@ -631,24 +707,94 @@ function Submission({ id }: { id: string }) {
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   useEffect(() => {
+    let cancelled = false;
     api<{ submissions: { body: string; revision: number }[] }>(
       `/api/bounties/${id}/submissions`,
     )
-      .then((r) =>
-        setText(
-          r.submissions
-            .map(
-              (s) =>
-                `${s.revision ? "Revision" : "Original submission"}\n\n${s.body}`,
-            )
-            .join("\n\n—\n\n"),
-        ),
-      )
-      .catch((e) => setError(e.message));
+      .then((r) => {
+        if (!cancelled)
+          setText(
+            r.submissions
+              .map(
+                (s) =>
+                  `${s.revision ? "Revision" : "Original submission"}\n\n${s.body}`,
+              )
+              .join("\n\n—\n\n"),
+          );
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e.message);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
   return error ? (
     <Banner error>{error}</Banner>
   ) : (
     <p className="submission-text">{text || "Loading confirmed submission…"}</p>
+  );
+}
+
+function ConfirmedFeedback({ id }: { id: string }) {
+  const [items, setItems] = useState<
+    {
+      id: string;
+      action: string;
+      feedback: string;
+      signature: string;
+      confirmed_at: string;
+    }[]
+  >([]);
+  const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    setError("");
+    let cancelled = false;
+    api<{ feedback: typeof items }>(`/api/bounties/${id}/feedback`, {
+      cache: "no-store",
+    })
+      .then((r) => {
+        if (!cancelled) setItems(r.feedback);
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, attempt]);
+  if (error)
+    return (
+      <Banner error>
+        {error}{" "}
+        <Button variant="secondary" onClick={() => setAttempt((n) => n + 1)}>
+          Retry feedback
+        </Button>
+      </Banner>
+    );
+  if (!items.length) return null;
+  return (
+    <section className="panel" aria-label="Requester feedback">
+      <h2>Requester feedback</h2>
+      {items.map((item) => (
+        <div key={item.id}>
+          <h3>
+            {item.action === "revise"
+              ? "Revision requested"
+              : "Rejection recorded"}
+          </h3>
+          <p className="submission-text">{item.feedback}</p>
+          <a
+            className="helper"
+            href={`https://explorer.solana.com/tx/${item.signature}?cluster=devnet`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Confirmed · {new Date(item.confirmed_at).toLocaleString()} ↗
+          </a>
+        </div>
+      ))}
+    </section>
   );
 }

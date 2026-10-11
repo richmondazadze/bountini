@@ -20,7 +20,10 @@ export async function GET(
       throw new HttpError(403, "Private draft");
     const activity =
       await sql`SELECT action,signature,updated_at FROM operations WHERE bounty_id=${id} AND status='confirmed' ORDER BY created_at`;
-    return Response.json({ activity });
+    return Response.json(
+      { activity },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (e) {
     return failure(e);
   }

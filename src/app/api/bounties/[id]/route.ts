@@ -15,7 +15,10 @@ export async function GET(
     const b = bountyFromRow(rows[0]);
     if (b.status === "draft" && (await walletSession()) !== b.requester)
       throw new HttpError(403, "This draft is private");
-    return Response.json({ bounty: b, serverTime: Date.now() });
+    return Response.json(
+      { bounty: b, serverTime: Date.now() },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (e) {
     return failure(e);
   }

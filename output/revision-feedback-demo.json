@@ -1,0 +1,66 @@
+{
+  "network": "devnet",
+  "appOrigin": "https://bountini.us",
+  "backgroundWorkerOnly": true,
+  "revisionFeedbackVerified": true,
+  "verifiedPayoutLamports": "1000000",
+  "verifiedRefundNetLamports": "995000",
+  "requester": "9sDhJvautigTqZfw5CZF3vNMQVgoFuYf6W6a4XBLqEZ8",
+  "worker": "H4fNWcVtybQaMgDcQzDQS8DjrFqJ8926Q7ZXdGtgDAeN",
+  "receipts": [
+    {
+      "id": "9b3015ca-2414-45f5-82db-e40ed7bbfcea",
+      "action": "fund",
+      "signature": "4esUceMF4hnfve6Df1T3b2khY9eNnQFXrMZnccNKF37GRXYSf1ZRvcF9ce8MpM96rJYGigqyaV9byAq859Wsb4zi",
+      "explorer": "https://explorer.solana.com/tx/4esUceMF4hnfve6Df1T3b2khY9eNnQFXrMZnccNKF37GRXYSf1ZRvcF9ce8MpM96rJYGigqyaV9byAq859Wsb4zi?cluster=devnet"
+    },
+    {
+      "id": "9b3015ca-2414-45f5-82db-e40ed7bbfcea",
+      "action": "claim",
+      "signature": "fF86y6oMinukgMnKGihEAWFBbrmENfrXZwo2H3tTAM4fRdhdAZDtBgyA41fqYNZsqw2ceyMi7AQ34cLcqdTXmxL",
+      "explorer": "https://explorer.solana.com/tx/fF86y6oMinukgMnKGihEAWFBbrmENfrXZwo2H3tTAM4fRdhdAZDtBgyA41fqYNZsqw2ceyMi7AQ34cLcqdTXmxL?cluster=devnet"
+    },
+    {
+      "id": "9b3015ca-2414-45f5-82db-e40ed7bbfcea",
+      "action": "submit",
+      "signature": "4QhBsUsa93DviJyWbCGPFnKzhc8Hdj6CGXkE8SVpfZ5DHrksubhokjzeMkmoKqSEuHEaD6mpkrZkwTCgw4VKeoLV",
+      "explorer": "https://explorer.solana.com/tx/4QhBsUsa93DviJyWbCGPFnKzhc8Hdj6CGXkE8SVpfZ5DHrksubhokjzeMkmoKqSEuHEaD6mpkrZkwTCgw4VKeoLV?cluster=devnet"
+    },
+    {
+      "id": "9b3015ca-2414-45f5-82db-e40ed7bbfcea",
+      "action": "revise",
+      "signature": "2hQKqUGatbnxiap2zosrBMoXWm7WDYpkHbruiRF67wpFqpfTDnZyu6SuZNv21JgAKjJyXXnC3DwQYgoD2wEm5QQK",
+      "explorer": "https://explorer.solana.com/tx/2hQKqUGatbnxiap2zosrBMoXWm7WDYpkHbruiRF67wpFqpfTDnZyu6SuZNv21JgAKjJyXXnC3DwQYgoD2wEm5QQK?cluster=devnet"
+    },
+    {
+      "id": "9b3015ca-2414-45f5-82db-e40ed7bbfcea",
+      "action": "submit",
+      "signature": "ztbwHKxCfZHpV697EzTEwCrYszjigtgeiuS7YnTQxt8B1F8Drz1D6F73rxykMQ6ywhGVcqujeegFDYpxTnjM8KR",
+      "explorer": "https://explorer.solana.com/tx/ztbwHKxCfZHpV697EzTEwCrYszjigtgeiuS7YnTQxt8B1F8Drz1D6F73rxykMQ6ywhGVcqujeegFDYpxTnjM8KR?cluster=devnet"
+    },
+    {
+      "id": "9b3015ca-2414-45f5-82db-e40ed7bbfcea",
+      "action": "reject",
+      "signature": "46jAyahmiXtbH2DDNLSXYfnnNqtdueU2FPyidNtr5wPfNJQu9WgTWdiKKJw9Z64LDKqkJ54FndmKVYdTphCY88Rs",
+      "explorer": "https://explorer.solana.com/tx/46jAyahmiXtbH2DDNLSXYfnnNqtdueU2FPyidNtr5wPfNJQu9WgTWdiKKJw9Z64LDKqkJ54FndmKVYdTphCY88Rs?cluster=devnet"
+    },
+    {
+      "id": "9b3015ca-2414-45f5-82db-e40ed7bbfcea",
+      "action": "approve",
+      "signature": "3JigH214Y53hMprhycPEEY2VhAHP1R65iKLXW9uJcTZDAYS3KTidrBFSLV1MWyWwjtqo3VYdt4T55g1mYsg4tgTW",
+      "explorer": "https://explorer.solana.com/tx/3JigH214Y53hMprhycPEEY2VhAHP1R65iKLXW9uJcTZDAYS3KTidrBFSLV1MWyWwjtqo3VYdt4T55g1mYsg4tgTW?cluster=devnet"
+    },
+    {
+      "id": "51ddb3f3-ba8c-41fc-8a67-3ddc33f0b1b6",
+      "action": "fund",
+      "signature": "4jGQNNSCb5RJAFKbd6evoD8n1uhUiobS27nW52S62T1U8sA6FnvQKPw45ZaPggHcsSm7dzt71MSW8feQvQcJQBJ6",
+      "explorer": "https://explorer.solana.com/tx/4jGQNNSCb5RJAFKbd6evoD8n1uhUiobS27nW52S62T1U8sA6FnvQKPw45ZaPggHcsSm7dzt71MSW8feQvQcJQBJ6?cluster=devnet"
+    },
+    {
+      "id": "51ddb3f3-ba8c-41fc-8a67-3ddc33f0b1b6",
+      "action": "cancel",
+      "signature": "tFXH6hF46CdCmHASw7q8gixU9zCtt7AKkw1YMYbPqXfGP5JM5AcSiWn2KsGNpr1EgxbAQbeNYQRoCuLZg5SVWk7",
+      "explorer": "https://explorer.solana.com/tx/tFXH6hF46CdCmHASw7q8gixU9zCtt7AKkw1YMYbPqXfGP5JM5AcSiWn2KsGNpr1EgxbAQbeNYQRoCuLZg5SVWk7?cluster=devnet"
+    }
+  ]
+}
