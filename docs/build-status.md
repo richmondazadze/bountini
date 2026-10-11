@@ -53,3 +53,5 @@ Browser follow-up: standalone MetaMask Connect initialization stalled without op
 The injected-transport follow-up is live at bountini.us, deployment dpl_3dDrMwGreoEYxi5jXYt4NgaG7f5X (source c254e5d).
 
 Live verification reached a MetaMask queue showing two confirmations, including a Mainnet simulation from the earlier attempts. Canceling through native automation was unreliable, so the user was asked to reject all queued signing requests before a clean Devnet prompt check. Screenshot: output/metamask-queued-request.png. Wallet-specific resolution is still unverified; no signature or funding broadcast was completed.
+
+After Chrome was fully restarted, Account 4 reconnected and authenticated successfully. A clean funding request opened the Devnet-only account connection prompt. Once connected, MetaMask's actual signing screen displayed Solana Devnet, estimated a roughly 0.102 SOL debit, showed the 0.000005 SOL fee, and enabled Confirm without the earlier simulation warning. Screenshot: output/metamask-devnet-ready.png. The final transaction signature was handed to the user; funding settlement is not yet claimed.
