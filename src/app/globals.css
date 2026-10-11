@@ -865,3 +865,16 @@ footer span:last-child {
     grid-row: 2;
   }
 }
+
+.account-loading {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+.account-skeleton {
+  display: inline-block;
+  width: 72px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--line, #e5e7eb);
+}

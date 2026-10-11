@@ -6,6 +6,16 @@ import { useAccount } from "./account-provider";
 export function AccountNav() {
   const path = usePathname();
   const { me, loading } = useAccount();
+  if (loading)
+    return (
+      <span
+        className="account-link account-loading"
+        role="status"
+        aria-label="Checking your account"
+      >
+        <span className="account-skeleton" aria-hidden="true" />
+      </span>
+    );
   return (
     <Link
       className="account-link"
@@ -22,7 +32,7 @@ export function AccountNav() {
             )
       }
     >
-      {loading ? "Account…" : me ? me.user.name.split(" ")[0] : "Sign in"}
+      {me ? me.user.name.split(" ")[0] : "Sign in"}
     </Link>
   );
 }
