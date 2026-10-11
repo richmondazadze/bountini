@@ -131,3 +131,26 @@ it("blocks configured voice and AI without verified wallet access", async () => 
     )?.disabled,
   ).toBe(true);
 });
+
+it("keeps the quest editor usable when browser storage is blocked", async () => {
+  m.me = { user: { id: "storage-test" }, wallets: [] };
+  const blocked = vi
+    .spyOn(Storage.prototype, "setItem")
+    .mockImplementation(() => {
+      throw new DOMException("Storage blocked", "SecurityError");
+    });
+  try {
+    await act(async () => root.render(<Create />));
+    expect(host.textContent).toContain("Create with Bountini.");
+    await act(async () =>
+      [...host.querySelectorAll("button")]
+        .find((b) => b.textContent === "Use translation example")!
+        .click(),
+    );
+    expect((host.querySelector("#title") as HTMLInputElement).value).toContain(
+      "Translate",
+    );
+  } finally {
+    blocked.mockRestore();
+  }
+});

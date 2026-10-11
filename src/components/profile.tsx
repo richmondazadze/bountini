@@ -17,6 +17,10 @@ export function Profile() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   useEffect(() => {
+    setCurrentPassword("");
+    setNewPassword("");
+    setError("");
+    setNotice("");
     if (me) {
       setName(me.user.name);
       setBio(me.profile.bio);

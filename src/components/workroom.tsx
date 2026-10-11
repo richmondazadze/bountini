@@ -31,6 +31,8 @@ export function Workroom({
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [more, setMore] = useState(false);
+  const [olderPending, setOlderPending] = useState(false);
+  const historyLoaded = useRef(false);
   const [report, setReport] = useState(false);
   const [reason, setReason] = useState("");
   const [notice, setNotice] = useState("");
@@ -42,6 +44,13 @@ export function Workroom({
     let stopped = false;
     let timer: ReturnType<typeof setTimeout>;
     setMessages([]);
+    setPending(false);
+    setOlderPending(false);
+    setMore(false);
+    historyLoaded.current = false;
+    setReport(false);
+    setReason("");
+    setNotice("");
     setBody("");
     draftId.current = null;
     setError("");
@@ -64,7 +73,7 @@ export function Workroom({
                 BigInt(a.seq) < BigInt(b.seq) ? -1 : 1,
               );
             });
-            setMore(r.hasMore);
+            if (!historyLoaded.current) setMore(r.hasMore);
             setError("");
           }
         }
@@ -143,19 +152,37 @@ export function Workroom({
       {more && messages[0] && (
         <Button
           variant="quiet"
+          pending={olderPending}
           onClick={async () => {
+            if (olderPending) return;
+            const g = generation.current;
+            const previouslyLoaded = historyLoaded.current;
+            historyLoaded.current = true;
+            setOlderPending(true);
             try {
               const r = await api<{ messages: Message[]; hasMore: boolean }>(
                 `/api/bounties/${id}/messages?before=${messages[0].seq}`,
               );
-              setMessages((old) => [...r.messages, ...old]);
+              if (g !== generation.current) return;
+              setMessages((old) => {
+                const merged = new Map(old.map((m) => [m.id, m]));
+                r.messages.forEach((m) => merged.set(m.id, m));
+                return [...merged.values()].sort((a, b) =>
+                  BigInt(a.seq) < BigInt(b.seq) ? -1 : 1,
+                );
+              });
               setMore(r.hasMore);
             } catch (e) {
-              setError(
-                e instanceof Error
-                  ? e.message
-                  : "Unable to load earlier messages",
-              );
+              if (g === generation.current) {
+                historyLoaded.current = previouslyLoaded;
+                setError(
+                  e instanceof Error
+                    ? e.message
+                    : "Unable to load earlier messages",
+                );
+              }
+            } finally {
+              if (g === generation.current) setOlderPending(false);
             }
           }}
         >

@@ -97,7 +97,11 @@ function CreateForm() {
     setLoaded(true);
   }, [draftKey]);
   useEffect(() => {
-    if (loaded) localStorage.setItem(draftKey, JSON.stringify(draft));
+    if (loaded) {
+      try {
+        localStorage.setItem(draftKey, JSON.stringify(draft));
+      } catch {}
+    }
   }, [draft, loaded, draftKey]);
   function update<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -132,7 +136,9 @@ function CreateForm() {
         method: "POST",
         body: JSON.stringify(draft),
       });
-      localStorage.removeItem(draftKey);
+      try {
+        localStorage.removeItem(draftKey);
+      } catch {}
       router.push(`/bounties/${bounty.id}`);
     } catch (e) {
       setError(

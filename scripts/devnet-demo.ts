@@ -1,4 +1,4 @@
-import { generateKeyPairSync, sign } from "node:crypto";
+import { generateKeyPairSync, sign, randomUUID } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import {
@@ -44,7 +44,7 @@ async function api(
   body?: unknown,
   method = body ? "POST" : "GET",
 ) {
-  const r = await fetch(origin + path, {
+  const options = {
     method,
     headers: {
       Origin: origin,
@@ -52,12 +52,38 @@ async function api(
       Cookie: w.cookie,
     },
     body: body ? JSON.stringify(body) : undefined,
-  });
+  };
+  let r = await fetch(origin + path, options);
+  if (r.status === 429) {
+    console.log(
+      "Account request throttled; waiting for the rate-limit window.",
+    );
+    await pause(61000);
+    r = await fetch(origin + path, options);
+  }
   const json = await r.json();
   assert(r.ok, `${r.status}: ${JSON.stringify(json)}`);
   return { json, r };
 }
+const demoAccounts: string[] = [];
 async function login(w: Wallet) {
+  const { json: account, r: signup } = await api(
+    "/api/account-auth/sign-up/email",
+    w,
+    {
+      email: `delivered+bountini-escrow-${randomUUID()}@resend.dev`,
+      password: "Controlled escrow passphrase " + randomUUID(),
+      name: "Controlled Devnet participant",
+    },
+  );
+  w.cookie = signup.headers
+    .getSetCookie()
+    .map((cookie) => cookie.split(";")[0])
+    .join("; ");
+  demoAccounts.push(account.user.id);
+  writeFileSync("tmp/devnet-demo-accounts.json", JSON.stringify(demoAccounts), {
+    mode: 0o600,
+  });
   const { json: c } = await api("/api/auth/challenge", w, {
     wallet: w.signer.address,
   });
@@ -65,7 +91,12 @@ async function login(w: Wallet) {
     id: c.id,
     signature: Array.from(sign(null, Buffer.from(c.message), w.privateKey)),
   });
-  w.cookie = r.headers.get("set-cookie")!.split(";")[0];
+  w.cookie +=
+    "; " +
+    r.headers
+      .getSetCookie()
+      .map((cookie) => cookie.split(";")[0])
+      .join("; ");
 }
 async function signed(
   w: Wallet,

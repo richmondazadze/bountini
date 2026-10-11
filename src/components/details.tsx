@@ -182,17 +182,22 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
     return () => clearInterval(timer);
   }, []);
   useEffect(() => {
-    localStorage.setItem(
-      `bountini.submission.v2:${id}:${me?.user.id || "guest"}`,
-      text,
-    );
+    try {
+      localStorage.setItem(
+        `bountini.submission.v2:${id}:${me?.user.id || "guest"}`,
+        text,
+      );
+    } catch {}
   }, [id, text]);
   useEffect(() => {
-    if (operation)
-      localStorage.setItem(
-        `bountini.operation.${id}`,
-        JSON.stringify(operation),
-      );
+    if (operation) {
+      try {
+        localStorage.setItem(
+          `bountini.operation.${id}`,
+          JSON.stringify(operation),
+        );
+      } catch {}
+    }
   }, [id, operation]);
   useEffect(() => {
     if (
@@ -296,10 +301,12 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
         status: "submitting" as const,
         signature: txSignature,
       };
-      localStorage.setItem(
-        `bountini.operation.${id}`,
-        JSON.stringify(savedBeforeSend),
-      );
+      try {
+        localStorage.setItem(
+          `bountini.operation.${id}`,
+          JSON.stringify(savedBeforeSend),
+        );
+      } catch {}
       setOperation(savedBeforeSend);
       await api(`/api/operations/${opId}`, {
         method: "PATCH",
@@ -317,7 +324,9 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
         status: "confirming" as const,
         signature: txSignature,
       };
-      localStorage.setItem(`bountini.operation.${id}`, JSON.stringify(saved));
+      try {
+        localStorage.setItem(`bountini.operation.${id}`, JSON.stringify(saved));
+      } catch {}
       setOperation(saved);
       const r = await api<{ operation: { status: TransactionStatus } }>(
         `/api/operations/${opId}`,
