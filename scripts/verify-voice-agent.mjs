@@ -20,7 +20,7 @@ const done = new Promise((resolve, reject) => {
   finish = { resolve, reject };
 });
 const lastAnswer =
-  "Yes, the brief is complete. Also preserve the link https://bountini.us exactly. Nothing else to add.";
+  "I want to pay 0.125 test SOL. Yes, the brief is complete. Also preserve the link https://bountini.us exactly. Nothing else to add.";
 const timer = setTimeout(
   () =>
     finish.reject(
@@ -37,7 +37,7 @@ try {
       active = conversation;
     },
     clientTools: {
-      prepare_quest_draft: ({ final_user_answer }) => {
+      prepare_quest_draft: ({ final_user_answer, reward_sol }) => {
         calls++;
         assert(
           messages.some(
@@ -48,6 +48,13 @@ try {
           "Agent must summarize the specific task and ask for additions before completion",
         );
         assert.equal(final_user_answer, lastAnswer);
+        assert.equal(reward_sol, "0.125");
+        assert(
+          messages.some((m) =>
+            /how much|what.*reward|what.*amount|what.*budget/i.test(m),
+          ),
+          "Agent must ask for the missing reward",
+        );
         finish.resolve();
         return "Unsaved draft handoff received by SDK test.";
       },
@@ -74,7 +81,7 @@ try {
   await done;
   assert.equal(calls, 1);
   console.log(
-    "PASS: live ElevenLabs agent invoked prepare_quest_draft once with the final answer through @elevenlabs/client 1.27.0 (text transport; microphone untested).",
+    "PASS: live ElevenLabs agent invoked prepare_quest_draft once with the final answer and confirmed reward through @elevenlabs/client 1.27.0 (text transport; microphone untested).",
   );
 } finally {
   clearTimeout(timer);

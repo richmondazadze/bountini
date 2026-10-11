@@ -268,7 +268,13 @@ function CreateForm() {
                   draft={draft}
                   getDraftRevision={() => draftRevision.current}
                   onApply={(proposal) => {
-                    setDraft((d) => ({ ...d, ...proposal }));
+                    setDraft((d) => ({
+                      ...d,
+                      ...proposal,
+                      reward: d.reward.trim()
+                        ? d.reward
+                        : (proposal.reward ?? d.reward),
+                    }));
                     setAgree(false);
                   }}
                 />

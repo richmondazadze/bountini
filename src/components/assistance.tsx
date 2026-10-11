@@ -7,7 +7,7 @@ import { Conversation } from "@elevenlabs/client";
 import { draftSchema, type Draft } from "@/domain/bounty";
 import { api } from "./header";
 import { Banner, Button, Icon } from "./ui";
-type Proposal = Omit<Draft, "reward">;
+type Proposal = Omit<Draft, "reward"> & { reward?: string };
 const proposalSchema = draftSchema.omit({ reward: true });
 type VoiceSession = {
   token: number;
@@ -33,6 +33,7 @@ export function DraftAssistant({
   const identity = `${me?.user.id || ""}:${wallet?.account.address || ""}`;
   const [text, setText] = useState("");
   const transcript = useRef("");
+  const voiceReward = useRef("");
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -85,6 +86,7 @@ export function DraftAssistant({
     setStatus("disconnected");
     setMuted(false);
     setProposal(null);
+    voiceReward.current = "";
     setPhase("idle");
   }, [identity, walletReady]);
   useEffect(() => {
@@ -126,6 +128,13 @@ export function DraftAssistant({
     setPending(false);
     setPhase("idle");
   }
+  function applyProposal(value: Proposal) {
+    const { reward, ...brief } = value;
+    current.current.onApply({
+      ...brief,
+      ...(!current.current.draft?.reward.trim() && reward ? { reward } : {}),
+    });
+  }
   async function generate(
     token: number,
     owner: string,
@@ -161,6 +170,16 @@ export function DraftAssistant({
         throw new Error(
           "Your transcript is preserved. Shorten it to 6,000 characters and retry, or edit the quest manually.",
         );
+      const confirmedReward = voiceReward.current;
+      if (
+        confirmedReward &&
+        !draftSchema.shape.reward.safeParse(confirmedReward).success
+      ) {
+        voiceReward.current = "";
+        throw new Error(
+          "The spoken reward was invalid. Enter a positive SOL amount with at most 9 decimal places in the reward field, then retry the draft.",
+        );
+      }
       const response = await api<{ result: unknown }>("/api/ai/draft", {
         method: "POST",
         body: JSON.stringify({ text: transcript.current }),
@@ -172,17 +191,21 @@ export function DraftAssistant({
         throw new Error(
           "The generated draft was incomplete. Your transcript is preserved; retry or edit the quest manually.",
         );
+      const generated: Proposal = {
+        ...parsed.data,
+        ...(confirmedReward ? { reward: confirmedReward } : {}),
+      };
       if (
         automatic &&
         !occupied &&
         snapshot === JSON.stringify(current.current.draft) &&
         revision === current.current.getDraftRevision?.()
       ) {
-        current.current.onApply(parsed.data);
+        applyProposal(generated);
         setProposal(null);
         setPhase("ready");
       } else {
-        setProposal(parsed.data);
+        setProposal(generated);
         setPhase("proposal");
       }
     } catch (e) {
@@ -206,6 +229,7 @@ export function DraftAssistant({
     invalidate();
     setProposal(null);
     setError("");
+    voiceReward.current = "";
     setStatus("connecting");
     setPhase("listening");
     const token = generation.current;
@@ -238,6 +262,7 @@ export function DraftAssistant({
         clientTools: {
           prepare_quest_draft: (parameters: {
             final_user_answer?: unknown;
+            reward_sol?: unknown;
           }) => {
             if (
               !valid(token, owner) ||
@@ -246,6 +271,10 @@ export function DraftAssistant({
             )
               return "Completion already handled or session expired.";
             voice.completed = true;
+            voiceReward.current =
+              typeof parameters?.reward_sol === "string"
+                ? parameters.reward_sol.trim()
+                : "";
             const finalAnswer =
               typeof parameters?.final_user_answer === "string"
                 ? parameters.final_user_answer
@@ -328,7 +357,7 @@ export function DraftAssistant({
         Optional assistance. Sign in, then connect and verify your wallet. Voice
         sends audio to ElevenLabs; drafting sends the transcript to Gemini.
         Confirm your brief with the voice agent to prepare an unsaved draft. You
-        review it and choose the reward. Provider retention depends on your
+        review it and confirm the reward. Provider retention depends on your
         account settings.
       </p>
       {error && <Banner error>{error}</Banner>}
@@ -342,6 +371,7 @@ export function DraftAssistant({
           maxLength={6000}
           onChange={(e) => {
             writeText(e.target.value);
+            voiceReward.current = "";
             setProposal(null);
             if (pending) {
               invalidate();
@@ -415,6 +445,7 @@ export function DraftAssistant({
           onClick={() => {
             void stop();
             writeText("");
+            voiceReward.current = "";
             setProposal(null);
             setError("");
           }}
@@ -443,6 +474,12 @@ export function DraftAssistant({
         <div style={{ marginTop: 24 }}>
           <h3>{proposal.title}</h3>
           <p className="submission-text">{proposal.description}</p>
+          {proposal.reward && (
+            <p className="helper">
+              Confirmed voice reward: {proposal.reward} test SOL. Existing
+              reward entries are preserved.
+            </p>
+          )}
           <ul>
             {proposal.requirements.map((r, i) => (
               <li key={i}>{r}</li>
@@ -452,7 +489,7 @@ export function DraftAssistant({
             type="button"
             disabled={!walletReady}
             onClick={() => {
-              current.current.onApply(proposal);
+              applyProposal(proposal);
               setProposal(null);
               setPhase("ready");
             }}

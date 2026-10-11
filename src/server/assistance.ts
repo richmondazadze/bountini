@@ -1,11 +1,9 @@
 import { z } from "zod";
+import { draftSchema } from "@/domain/bounty";
 import { database, HttpError } from "./db";
-export const suggestedDraft = z.object({
-  title: z.string().min(5).max(120),
-  description: z.string().min(20).max(2000),
-  category: z.enum(["Translation", "Writing", "Community", "Development"]),
-  requirements: z.array(z.string().min(3).max(1000)).min(1).max(12),
-});
+// Use the quest's description limit so essential source content fits inside the
+// crafted brief without needing a raw conversation appendix.
+export const suggestedDraft = draftSchema.omit({ reward: true });
 export const advisorySchema = z.object({
   summary: z.string().max(2000),
   criteria: z

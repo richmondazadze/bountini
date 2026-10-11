@@ -35,7 +35,9 @@ import { DraftAssistant } from "../src/components/assistance";
 let root: Root,
   host: HTMLDivElement,
   options: any,
-  applied: Mock<(proposal: Omit<Draft, "reward">) => void>,
+  applied: Mock<
+    (proposal: Omit<Draft, "reward"> & { reward?: string }) => void
+  >,
   form: Draft,
   active: any;
 const result = {
@@ -331,4 +333,114 @@ it("preserves edits even when fields are restored to their original values", asy
   await act(async () => resolve({ result }));
   expect(applied).not.toHaveBeenCalled();
   expect(button("Apply editable proposal")).toBeTruthy();
+});
+
+it("fills an empty reward with the explicitly confirmed voice amount", async () => {
+  form = { ...form, reward: "" };
+  await act(async () => render());
+  await start();
+  await act(async () =>
+    options.clientTools.prepare_quest_draft({
+      final_user_answer: "Yes, 0.125 SOL is correct.",
+      reward_sol: "0.125",
+    }),
+  );
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  expect(form.reward).toBe("0.125");
+  expect(applied).toHaveBeenCalledOnce();
+});
+it("preserves an existing reward even if voice proposes another amount", async () => {
+  await start();
+  await act(async () =>
+    options.clientTools.prepare_quest_draft({
+      final_user_answer: "Yes, 0.9 SOL.",
+      reward_sol: "0.9",
+    }),
+  );
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  expect(form.reward).toBe("0.25");
+});
+it("preserves a concurrent reward edit when applying the generated proposal", async () => {
+  let resolve!: (value: any) => void;
+  form = { ...form, reward: "" };
+  await act(async () => render());
+  await start();
+  m.api.mockImplementationOnce(
+    () =>
+      new Promise((r) => {
+        resolve = r;
+      }),
+  );
+  await act(async () =>
+    options.clientTools.prepare_quest_draft({
+      final_user_answer: "Confirmed",
+      reward_sol: "0.8",
+    }),
+  );
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  form = { ...form, reward: "0.6" };
+  m.revision++;
+  await act(async () => render());
+  await act(async () => resolve({ result }));
+  expect(applied).not.toHaveBeenCalled();
+  await act(async () => button("Apply editable proposal").click());
+  expect(form.reward).toBe("0.6");
+});
+it("retains a confirmed reward through generation failure and retry", async () => {
+  form = { ...form, reward: "" };
+  await act(async () => render());
+  await start();
+  m.api.mockRejectedValueOnce(new Error("temporary failure"));
+  await act(async () =>
+    options.clientTools.prepare_quest_draft({
+      final_user_answer: "Confirmed",
+      reward_sol: "0.45",
+    }),
+  );
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  await act(async () => button("Retry draft").click());
+  await act(async () => button("Apply editable proposal").click());
+  expect(form.reward).toBe("0.45");
+});
+for (const amount of ["0", "-1", "0.0000000001", "1e2", "100000000000"])
+  it(`rejects invalid voice reward ${amount} without generating`, async () => {
+    await start();
+    await act(async () =>
+      options.clientTools.prepare_quest_draft({
+        final_user_answer: "Confirmed",
+        reward_sol: amount,
+      }),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(requests()).toHaveLength(0);
+    expect(applied).not.toHaveBeenCalled();
+    expect(host.textContent).toContain("spoken reward was invalid");
+    await act(async () => button("Retry draft").click());
+    expect(requests()).toHaveLength(1);
+  });
+it("leaves the reward empty when the requester chooses to decide later", async () => {
+  form = { ...form, reward: "" };
+  await act(async () => render());
+  await start();
+  await act(async () =>
+    options.clientTools.prepare_quest_draft({
+      final_user_answer: "I'll decide the reward later",
+      reward_sol: "",
+    }),
+  );
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  expect(form.reward).toBe("");
+  expect(applied).toHaveBeenCalledOnce();
 });
