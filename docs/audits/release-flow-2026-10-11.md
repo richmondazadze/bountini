@@ -15,7 +15,7 @@ Review covers guest entry, email accounts, requester/worker dashboards, wallet l
 
 ## Validation
 
-- 83 tests across 18 files passed; TypeScript and optimized production build passed.
+- 87 tests across 19 files passed; TypeScript and optimized production build passed.
 - 23 hosted HTTP checks passed: public entry pages, health, private account/notifications/participant endpoints, authenticated mutations, malformed pagination and missing quests.
 - Actual database-backed Better Auth tests passed password policy, immediate signup/login, password hashing, hostile-origin rejection, single-use password recovery and session revocation.
 - Browser requester sign-in returned to /create with Requester preference saved; the private editor was available and saving required wallet proof.
@@ -36,3 +36,9 @@ Review covers guest entry, email accounts, requester/worker dashboards, wallet l
 The two-account hosted journey passed after updating the demo runner for email-first authentication: funding, claim, submission, confirmed revision feedback, revised submission, rejection with approval still available, payout, and a separate cancellation/refund. Transaction reconciliation was performed by the hosted background worker rather than by foreground operation polling. Exact balance assertions verified a 1,000,000-lamport payout and a 995,000-lamport net refund after the transaction fee. Gemini advisory review succeeded against the revised confirmed submission.
 
 The successful run is recorded in output/revision-feedback-demo.json. The initial run stopped at the expected signup rate limit when combined with browser QA; the runner now waits for the rate-limit window. Its generated test records are isolated from existing users.
+
+## Voice resilience and final service checks
+
+An initial hosted signed-session check returned 503; the production credentials matched the working local configuration. A repeated hosted check passed both ElevenLabs signed-session creation and Gemini draft generation, together with the complete private workroom and notification checks. The voice route now retries one temporary provider response (429/502/503/504), consumes application quota once, and returns a typed 503 fallback on network timeout. Tests cover temporary failure recovery, timeout, invalid credentials, and rejected non-ElevenLabs URLs.
+
+The browser sign-out check restored the guest dashboard and removed wallet controls. Controlled browser and escrow QA accounts/quest rows were removed after recording receipts; no existing user's quest was touched. Runtime dependency audit reports zero known findings. Final validation: 87 tests, TypeScript, optimized build, hosted service/workroom checks, and 23 public/private HTTP checks.

@@ -1,24 +1,24 @@
 {
   "result": {
-    "summary": "The submission successfully translates the announcement into neutral Spanish while accurately preserving the requested time and day. All immutable requirements have been fully satisfied.",
+    "summary": "The submission successfully translates the announcement into neutral Spanish while preserving both the date ('sábado') and time ('10 a. m.').",
     "criteria": [
       {
         "criterion": "Preserve Saturday and 10 AM",
-        "evidence": "a las 10 a. m. el sábado",
-        "concern": "None. The translation accurately reflects the specified time (10 AM) and day (Saturday).",
+        "evidence": "\"a las 10 a. m. el sábado.\"",
+        "concern": "None. Both the time and the day of the week have been accurately preserved in the translation.",
         "suggestedRevision": "No revision needed."
       },
       {
         "criterion": "Use neutral Spanish",
-        "evidence": "La reunión de la comunidad comienza a las 10 a. m. el sábado.",
-        "concern": "None. The phrasing uses standard, clear, and neutral Spanish vocabulary and grammar suitable for a general audience.",
+        "evidence": "\"La reunión de la comunidad empieza a las 10 a. m. el sábado.\"",
+        "concern": "None. The vocabulary and grammar used ('reunión', 'comunidad', 'empieza') are standard, clear, and universally understood across Spanish-speaking regions.",
         "suggestedRevision": "No revision needed."
       }
     ]
   },
   "model": "gemini-3.6-flash",
   "promptVersion": "bountini-advisory-v1",
-  "createdAt": "2026-10-11T04:57:11.986Z",
+  "createdAt": "2026-10-11T12:50:34.084Z",
   "requirementsHash": "5aec291c58d342befcabb63de9f42cc1975ebc99c4996837ecfb6564b2bd1344",
-  "submissionHash": "ae88affdfa41097fc830ac2505fc761896b1d2bcd02f0123148866efd3774743"
+  "submissionHash": "06b0f6f61d4ca47bb01daa181ded68c9a935a63ffd094ba10bc925f1f76ee567"
 }
