@@ -18,9 +18,26 @@ export const advisorySchema = z.object({
     .min(1)
     .max(12),
 });
-export async function quota(wallet: string, kind: string, limit = 20) {
-  const rows =
-    await database()`INSERT INTO assistance_usage(wallet,kind,used) VALUES(${wallet},${kind},1) ON CONFLICT(wallet,kind,day) DO UPDATE SET used=assistance_usage.used+1 WHERE assistance_usage.used<${limit} RETURNING used`;
+export const assistanceLimits = { voice: 25, draft: 50, review: 50 } as const;
+export async function quota(
+  wallet: string,
+  kind: keyof typeof assistanceLimits,
+) {
+  const limit = assistanceLimits[kind];
+  const rows = await database()`WITH owner AS (
+      SELECT user_id FROM wallet_links WHERE wallet=${wallet}
+    ), initial AS (
+      SELECT 'account:' || owner.user_id::text AS key,
+        COALESCE(SUM(a.used),0)::integer AS used
+      FROM owner LEFT JOIN wallet_links w ON w.user_id=owner.user_id
+      LEFT JOIN assistance_usage a ON a.wallet=w.wallet AND a.kind=${kind} AND a.day=CURRENT_DATE
+      GROUP BY owner.user_id
+    )
+    INSERT INTO assistance_usage(wallet,kind,used)
+    SELECT key, ${kind}, used+1 FROM initial WHERE used<${limit}
+    ON CONFLICT(wallet,kind,day) DO UPDATE SET used=assistance_usage.used+1
+      WHERE assistance_usage.used<${limit}
+    RETURNING used`;
   if (!rows.length)
     throw new HttpError(
       429,

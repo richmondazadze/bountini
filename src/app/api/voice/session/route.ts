@@ -12,7 +12,7 @@ export async function POST(request: Request) {
         503,
         "Voice assistance is unavailable. Continue by typing.",
       );
-    await quota(wallet, "voice", 5);
+    await quota(wallet, "voice");
     const requestSession = () =>
       fetch(
         `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${encodeURIComponent(agent)}`,
