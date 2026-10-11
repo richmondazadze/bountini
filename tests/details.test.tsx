@@ -228,3 +228,14 @@ it("reloads private feedback after authentication changes with the same connecte
   expect(host.textContent).toContain("Restore the original date");
   expect(host.textContent).not.toContain("Sign in again");
 });
+it("clears an old private draft when the new session cannot access it", async () => {
+  mocks.actor = "requester";
+  bounty.status = "draft";
+  await mount();
+  expect(host.textContent).toContain("Original brief");
+  mocks.actor = "outsider";
+  mocks.api.mockRejectedValue(new Error("This draft is private"));
+  await act(async () => root.render(<Details id="quest" review />));
+  expect(host.textContent).not.toContain("Original brief");
+  expect(host.textContent).toContain("This draft is private");
+});

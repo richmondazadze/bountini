@@ -54,6 +54,8 @@ export function Details({
     { action: string; signature: string; updated_at: string }[]
   >([]);
   const actor = wallet?.account.address;
+  const actorRef = useRef(actor);
+  actorRef.current = actor;
   const [authVersion, setAuthVersion] = useState(0);
   const refreshSequence = useRef(0);
   const load = useCallback(
@@ -90,10 +92,12 @@ export function Details({
               setOperation(active);
           } catch {}
       } catch (e) {
-        if (!quiet && sequence === refreshSequence.current)
+        if (!quiet && sequence === refreshSequence.current) {
+          setB(null);
           setError(
             e instanceof Error ? e.message : "Quest could not be loaded",
           );
+        }
       } finally {
         if (sequence === refreshSequence.current) setLoading(false);
       }
@@ -101,6 +105,9 @@ export function Details({
     [id, actor],
   );
   useEffect(() => {
+    setB(null);
+    setLoading(true);
+    setOperation(null);
     void load();
     const refocus = () => void load();
     window.addEventListener("focus", refocus);
@@ -111,7 +118,18 @@ export function Details({
     window.addEventListener("bountini-auth-change", authChange);
     try {
       const saved = localStorage.getItem(`bountini.operation.${id}`);
-      if (saved) setOperation(JSON.parse(saved));
+      if (saved) {
+        const recovered = JSON.parse(saved);
+        const sequence = refreshSequence.current;
+        api<{ operation: { status: TransactionStatus; signature?: string } }>(
+          `/api/operations/${recovered.id}`,
+        )
+          .then((r) => {
+            if (sequence === refreshSequence.current)
+              setOperation({ id: recovered.id, ...r.operation });
+          })
+          .catch(() => {});
+      }
       const draft = localStorage.getItem(`bountini.submission.${id}`);
       if (draft) setText(draft);
     } catch {}
@@ -243,6 +261,10 @@ export function Details({
         process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
           "https://api.devnet.solana.com",
       );
+      if (actorRef.current !== actor)
+        throw new Error(
+          "Wallet changed. Reconnect and retry with the current account.",
+        );
       const preparedTx = await client.transaction.prepare({
         authority: wallet!,
         instructions: [ix],
@@ -252,6 +274,10 @@ export function Details({
         },
       });
       const signed = await client.transaction.sign(preparedTx);
+      if (actorRef.current !== actor)
+        throw new Error(
+          "Wallet changed while signing. This transaction was not broadcast.",
+        );
       txSignature = String(getSignatureFromTransaction(signed));
       // Save the known signature before broadcast so a dropped RPC response remains recoverable.
       const savedBeforeSend = {

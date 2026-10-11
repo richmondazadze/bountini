@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useWalletConnection } from "@solana/react-hooks";
 import { Button, Dialog, Banner, Icon } from "./ui";
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -22,12 +22,37 @@ export function Header() {
   const [pending, setPending] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const address = wallet?.account.address;
+  const identity = `${wallet?.connector.id || ""}:${address || ""}`;
+  const identityRef = useRef(identity);
+  identityRef.current = identity;
+  const sessionSync = useRef<Promise<void>>(Promise.resolve());
+  const [authReady, setAuthReady] = useState(false);
   useEffect(() => {
+    let cancelled = false;
     setSignedIn(false);
-    api<{ wallet: string }>("/api/auth/session")
-      .then((v) => setSignedIn(v.wallet === address))
-      .catch(() => {});
-  }, [address]);
+    setAuthReady(false);
+    setError("");
+    sessionSync.current = sessionSync.current
+      .catch(() => {})
+      .then(async () => {
+        if (cancelled) return;
+        try {
+          const session = await api<{ wallet: string }>("/api/auth/session", {
+            cache: "no-store",
+          });
+          if (cancelled) return;
+          if (address && session.wallet === address) setSignedIn(true);
+          else await api("/api/auth/session", { method: "DELETE" });
+        } catch {}
+        if (!cancelled) {
+          setAuthReady(true);
+          window.dispatchEvent(new Event("bountini-auth-change"));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [identity, address]);
   async function signIn() {
     if (!wallet?.signMessage) {
       setError(
@@ -37,21 +62,32 @@ export function Header() {
     }
     setPending(true);
     setError("");
-    try {
-      const c = await api<{ id: string; message: string }>(
-        "/api/auth/challenge",
-        { method: "POST", body: JSON.stringify({ wallet: address }) },
-      );
-      const signature = await wallet.signMessage(
-        new TextEncoder().encode(c.message),
-      );
-      await api("/api/auth/verify", {
-        method: "POST",
-        body: JSON.stringify({ id: c.id, signature: Array.from(signature) }),
+    const signingIdentity = identity;
+    const signingWallet = wallet;
+    const attempt = sessionSync.current
+      .catch(() => {})
+      .then(async () => {
+        if (identityRef.current !== signingIdentity)
+          throw new Error("Wallet changed. Sign in with the current account.");
+        const c = await api<{ id: string; message: string }>(
+          "/api/auth/challenge",
+          { method: "POST", body: JSON.stringify({ wallet: address }) },
+        );
+        const signature = await signingWallet.signMessage!(
+          new TextEncoder().encode(c.message),
+        );
+        await api("/api/auth/verify", {
+          method: "POST",
+          body: JSON.stringify({ id: c.id, signature: Array.from(signature) }),
+        });
+        if (identityRef.current !== signingIdentity) return;
+        setSignedIn(true);
+        window.dispatchEvent(new Event("bountini-auth-change"));
+        setOpen(false);
       });
-      setSignedIn(true);
-      window.dispatchEvent(new Event("bountini-auth-change"));
-      setOpen(false);
+    sessionSync.current = attempt.catch(() => {});
+    try {
+      await attempt;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sign-in was not completed");
     } finally {
@@ -115,13 +151,18 @@ export function Header() {
         {error && <Banner error>{error}</Banner>}
         {address ? (
           <>
+            <p className="helper">Connected wallet: {wallet?.connector.name}</p>
             <p className="address">{address}</p>
             <p>
               {signedIn
                 ? "Signed in to Bountini"
                 : "Sign a message to save quests and submissions."}
             </p>
-            <Button pending={pending} disabled={signedIn} onClick={signIn}>
+            <Button
+              pending={pending}
+              disabled={signedIn || !authReady}
+              onClick={signIn}
+            >
               {pending
                 ? "Waiting for wallet…"
                 : signedIn

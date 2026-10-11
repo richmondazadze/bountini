@@ -3,7 +3,10 @@ import { walletSession, COOKIE, tokenHash } from "@/server/auth";
 import { database, failure, requireOrigin } from "@/server/db";
 export async function GET() {
   try {
-    return Response.json({ wallet: await walletSession() });
+    return Response.json(
+      { wallet: await walletSession() },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
   } catch (e) {
     return failure(e);
   }

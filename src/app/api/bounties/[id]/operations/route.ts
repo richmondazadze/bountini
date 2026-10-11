@@ -9,7 +9,8 @@ import {
   HttpError,
 } from "@/server/db";
 import { bountyFromRow } from "@/server/bounties";
-import { canAct } from "@/domain/bounty";
+import { address } from "@solana/kit";
+import { canAct, parseSOL, formatSOL } from "@/domain/bounty";
 import { devnetRpc } from "@/chain/network";
 import { escrowInstruction, bytesHex } from "@/chain/escrow";
 const schema = z.object({
@@ -76,6 +77,18 @@ export async function POST(
     const rpc = await devnetRpc(
       process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com",
     );
+    if (action === "fund") {
+      const [balance, rent] = await Promise.all([
+        rpc.getBalance(address(actor), { commitment: "confirmed" }).send(),
+        rpc.getMinimumBalanceForRentExemption(203n).send(),
+      ]);
+      const minimum = parseSOL(b.reward) + rent + 5000n;
+      if (balance.value < minimum)
+        throw new HttpError(
+          400,
+          `Your connected wallet has ${formatSOL(balance.value)} test SOL on Devnet. Funding needs at least ${formatSOL(minimum)} test SOL for the reward, escrow rent and network fee. Request Devnet SOL for ${actor} at faucet.solana.com.`,
+        );
+    }
     const { value: lifetime } = await rpc
       .getLatestBlockhash({ commitment: "finalized" })
       .send();
