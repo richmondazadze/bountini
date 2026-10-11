@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import {useWalletConnection} from "@solana/react-hooks";
 import { useRouter } from "next/navigation";
 import {
   draftSchema,
@@ -9,7 +10,7 @@ import {
   formatSOL,
 } from "@/domain/bounty";
 import { api } from "./header";
-import {DraftAssistant} from "./assistance";
+import { DraftAssistant } from "./assistance";
 import { Banner, Button, Enter, Icon } from "./ui";
 const empty: Draft = {
   title: "",
@@ -33,6 +34,7 @@ const example: Draft = {
 };
 export function Create() {
   const router = useRouter();
+  const {wallet}=useWalletConnection();
   const [draft, setDraft] = useState<Draft>(empty);
   const [loaded, setLoaded] = useState(false);
   const [review, setReview] = useState(false);
@@ -72,7 +74,12 @@ export function Create() {
     const parsed = draftSchema.safeParse(draft);
     if (!parsed.success) {
       setError(parsed.error.issues[0].message);
-      const field=parsed.error.issues[0].path[0];document.getElementById(field==="requirements"?"requirement-0":String(field))?.focus();
+      const field = parsed.error.issues[0].path[0];
+      document
+        .getElementById(
+          field === "requirements" ? "requirement-0" : String(field),
+        )
+        ?.focus();
       return;
     }
     setDraft(parsed.data);
@@ -83,6 +90,8 @@ export function Create() {
     setPending(true);
     setError("");
     try {
+      const session=await api<{wallet:string}>("/api/auth/session");
+      if(session.wallet!==wallet?.account.address)throw new Error("Sign in with your connected wallet before saving.");
       const { bounty } = await api<{ bounty: Bounty }>("/api/bounties", {
         method: "POST",
         body: JSON.stringify(draft),
@@ -177,7 +186,8 @@ export function Create() {
                 }}
               >
                 <Banner>
-                  Your draft is saved on this device as you type. Review each requirement before funding.
+                  Your draft is saved on this device as you type. Review each
+                  requirement before funding.
                 </Banner>
                 <div
                   className="actions"
@@ -190,9 +200,13 @@ export function Create() {
                   >
                     Use translation example
                   </Button>
-
                 </div>
-                <DraftAssistant onApply={proposal=>{setDraft(d=>({...d,...proposal}));setAgree(false);}} />
+                <DraftAssistant
+                  onApply={(proposal) => {
+                    setDraft((d) => ({ ...d, ...proposal }));
+                    setAgree(false);
+                  }}
+                />
                 <div className="field">
                   <label htmlFor="title">Quest title</label>
                   <input
@@ -239,7 +253,8 @@ export function Create() {
                   {draft.requirements.map((r, i) => (
                     <div className="amount" key={i}>
                       <input
-                        id={`requirement-${i}`} aria-label={`Requirement ${i + 1}`}
+                        id={`requirement-${i}`}
+                        aria-label={`Requirement ${i + 1}`}
                         value={r}
                         onChange={(e) =>
                           update(

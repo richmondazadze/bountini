@@ -13,34 +13,70 @@ export function Market({ mine = false }: { mine?: boolean }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All categories");
   const [view, setView] = useState("All");
+  const [state, setState] = useState("All states");
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [morePending, setMorePending] = useState(false);
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const r = await api<{ bounties: Bounty[] }>(
-        `/api/bounties${mine ? "?mine=true" : ""}`,
+      const params = new URLSearchParams({
+        mine: String(mine),
+        q: query,
+        category,
+        role: mine ? view : "All",
+        state,
+        page: "0",
+      });
+      const r = await api<{ bounties: Bounty[]; hasMore: boolean }>(
+        `/api/bounties?${params}`,
       );
       setBounties(r.bounties);
+      setHasMore(r.hasMore);
+      setPage(0);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load quests");
     } finally {
       setLoading(false);
     }
-  }, [mine]);
+  }, [mine, query, category, view, state]);
   useEffect(() => {
-    void load();
+    const debounce = setTimeout(() => void load(), 250);
+    const refresh = () => void load();
+    window.addEventListener("bountini-auth-change", refresh);
+    return () => {
+      clearTimeout(debounce);
+      window.removeEventListener("bountini-auth-change", refresh);
+    };
   }, [load, wallet?.account.address]);
-  const address = wallet?.account.address;
-  const visible = bounties.filter(
-    (b) =>
-      (category === "All categories" || b.category === category) &&
-      `${b.title} ${b.description}`
-        .toLowerCase()
-        .includes(query.toLowerCase()) &&
-      (!mine ||
-        view === "All" ||
-        (view === "Posted" ? b.requester === address : b.worker === address)),
-  );
+  const visible = bounties;
+  async function more() {
+    setMorePending(true);
+    try {
+      const params = new URLSearchParams({
+        mine: String(mine),
+        q: query,
+        category,
+        role: mine ? view : "All",
+        state,
+        page: String(page + 1),
+      });
+      const r = await api<{ bounties: Bounty[]; hasMore: boolean }>(
+        `/api/bounties?${params}`,
+      );
+      setBounties((previous) => [
+        ...previous,
+        ...r.bounties.filter((next) => !previous.some((b) => b.id === next.id)),
+      ]);
+      setHasMore(r.hasMore);
+      setPage((p) => p + 1);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to load more quests");
+    } finally {
+      setMorePending(false);
+    }
+  }
   return (
     <Enter>
       <div className="page">
@@ -100,6 +136,26 @@ export function Market({ mine = false }: { mine?: boolean }) {
                   ))}
                 </select>
               </div>
+              <div className="field">
+                <label htmlFor="quest-state">Availability</label>
+                <select
+                  id="quest-state"
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                >
+                  {[
+                    "All states",
+                    "open",
+                    "in-progress",
+                    "in-review",
+                    "revision-requested",
+                    "paid",
+                    "refunded",
+                  ].map((s) => (
+                    <option key={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
               {mine && (
                 <div className="field">
                   <label htmlFor="view">Your role</label>
@@ -125,6 +181,15 @@ export function Market({ mine = false }: { mine?: boolean }) {
                 <Button variant="secondary" onClick={load}>
                   Retry loading
                 </Button>
+                {hasMore && !loading && (
+                  <Button
+                    variant="secondary"
+                    pending={morePending}
+                    onClick={more}
+                  >
+                    Load more quests
+                  </Button>
+                )}
               </>
             ) : loading ? (
               <p role="status" aria-busy="true">
@@ -172,6 +237,11 @@ export function Market({ mine = false }: { mine?: boolean }) {
                   Create a quest
                 </Link>
               </div>
+            )}
+            {hasMore && !loading && (
+              <Button variant="secondary" pending={morePending} onClick={more}>
+                Load more quests
+              </Button>
             )}
           </>
         )}

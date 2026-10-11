@@ -50,6 +50,7 @@ export function Header() {
         body: JSON.stringify({ id: c.id, signature: Array.from(signature) }),
       });
       setSignedIn(true);
+      window.dispatchEvent(new Event("bountini-auth-change"));
       setOpen(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sign-in was not completed");
@@ -134,6 +135,7 @@ export function Header() {
                   await api("/api/auth/session", { method: "DELETE" });
                 } catch {}
                 await disconnect();
+                window.dispatchEvent(new Event("bountini-auth-change"));
                 setOpen(false);
               }}
             >

@@ -760,3 +760,8 @@ footer span:last-child {
     background: HighlightText;
   }
 }
+
+.page[data-theme] {
+  background: var(--surface);
+  color: var(--text);
+}

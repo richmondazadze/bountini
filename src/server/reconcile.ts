@@ -84,6 +84,9 @@ export async function reconcileOperation(id: string) {
     (ix) =>
       keys[ix.programIdIndex] === program &&
       keys[ix.accounts[0]] === pda &&
+      keys[ix.accounts[1]] === op.actor &&
+      (op.action !== "approve" || keys[ix.accounts[2]] === b.worker) &&
+      (op.action !== "withdraw" || keys[ix.accounts[2]] === b.requester) &&
       op.expected_account === pda &&
       bytesHex(Uint8Array.from(getBase58Encoder().encode(ix.data))) ===
         op.expected_data &&
@@ -123,7 +126,7 @@ export async function reconcileOperation(id: string) {
   await sql.transaction([
     sql`UPDATE bounties SET worker=${chain.worker},status=${chain.status},chain_address=${pda},deadline=${chain.deadline},revision_used=${chain.revisionUsed},signature=${op.signature},chain_slot=${account.context.slot.toString()},updated_at=now() WHERE id=${b.id} AND (chain_slot IS NULL OR chain_slot<=${account.context.slot.toString()}::numeric)`,
     sql`UPDATE operations SET status='confirmed',updated_at=now() WHERE id=${id}`,
-    sql`UPDATE submissions SET confirmed=true WHERE bounty_id=${b.id} AND content_hash=${chain.submissionHash}`,
+    sql`UPDATE submissions SET confirmed=true WHERE bounty_id=${b.id} AND content_hash=${op.action === "submit" ? op.expected_data.slice(16) : chain.submissionHash}`,
   ]);
   return { ...op, status: "confirmed" };
 }

@@ -1,0 +1,18 @@
+# Deploying this worker requires approval for Render's $7/month plan.
+services:
+  - type: worker
+    name: bountini-reconciler
+    runtime: node
+    region: ohio
+    plan: starter
+    buildCommand: npm ci
+    startCommand: npm run worker
+    envVars:
+      - key: NODE_VERSION
+        value: 24
+      - key: DATABASE_URL
+        sync: false
+      - key: SOLANA_RPC_URL
+        value: https://api.devnet.solana.com
+      - key: NEXT_PUBLIC_ESCROW_PROGRAM_ID
+        value: DYf6RhzG8RLw3zhoa2C9RDXWkBJ2Qgss9Mnmarbk7fce

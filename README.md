@@ -14,7 +14,7 @@ Anchor 0.32.1, Agave 2.3.0. Run `anchor build` with their binaries on PATH, then
 
 `npm test` runs domain, codec and compiled-program tests. The compiled-program suite is skipped when the binary is absent; run `anchor build` first to include it. `npm run typecheck` and `npm run build` validate the web app. CI builds the program before running contract tests.
 
-Program public address: `DYf6RhzG8RLw3zhoa2C9RDXWkBJ2Qgss9Mnmarbk7fce`. This address is reserved; deployment status is recorded in `docs/build-status.md`. Never configure an undeployed address as a live escrow. `docs/domain-rules.md` records the approved rules.
+Program public address: `DYf6RhzG8RLw3zhoa2C9RDXWkBJ2Qgss9Mnmarbk7fce`. This program is deployed on Devnet; validation status is recorded in `docs/build-status.md`. Never configure an undeployed address as a live escrow. `docs/domain-rules.md` records the approved rules.
 
 ## Operations
 
@@ -22,4 +22,4 @@ Set the same DATABASE_URL, SOLANA_RPC_URL and NEXT_PUBLIC_ESCROW_PROGRAM_ID on t
 
 ## Hosting
 
-Vercel web/API, Neon PostgreSQL, Render worker, Porkbun domain bountini.us. AI and voice are intentionally disabled until the manual two-wallet Devnet journey passes; Gemini and ElevenLabs integration is a later phase gate.
+Vercel web/API, Neon PostgreSQL, Render worker, Porkbun domain bountini.us. The app is live at https://bountini.us. The manual two-wallet Devnet gate passed; Gemini assistance and ElevenLabs voice are enabled. The $7/month Render worker is prepared but awaits purchase approval. See docs/build-status.md for operational limits and verification evidence.

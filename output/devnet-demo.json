@@ -1,0 +1,46 @@
+{
+  "network": "devnet",
+  "appOrigin": "https://bountini.us",
+  "verifiedPayoutLamports": "1000000",
+  "verifiedRefundNetLamports": "995000",
+  "requester": "4bQmbFZmrdU58ryh8yc3cWwqmeFSDwJ5D8N74MaFKVvu",
+  "worker": "4jyjuGa6qH5iXMbzLtnPrQU2RBENhCaKDQtYtJ1ZVhxH",
+  "receipts": [
+    {
+      "id": "c36dc1e4-b084-4bbe-a843-f1892cfc351f",
+      "action": "fund",
+      "signature": "3VYq9iroC4VubAD6RCpwXzcWM11gH7hvvjCETYnWCVdbvnjmx6AEpivjyAUu6VuYV3MpbUc17BFWs6CbaC9hM6Lj",
+      "explorer": "https://explorer.solana.com/tx/3VYq9iroC4VubAD6RCpwXzcWM11gH7hvvjCETYnWCVdbvnjmx6AEpivjyAUu6VuYV3MpbUc17BFWs6CbaC9hM6Lj?cluster=devnet"
+    },
+    {
+      "id": "c36dc1e4-b084-4bbe-a843-f1892cfc351f",
+      "action": "claim",
+      "signature": "3gvnV4zvA7vv8wtkjiT4fYWvFDSoc9QzHKENGqZY21fJvQJyX1WX6bcXFsdyEfatK81xrS8mFHQMbu1k5LvB6331",
+      "explorer": "https://explorer.solana.com/tx/3gvnV4zvA7vv8wtkjiT4fYWvFDSoc9QzHKENGqZY21fJvQJyX1WX6bcXFsdyEfatK81xrS8mFHQMbu1k5LvB6331?cluster=devnet"
+    },
+    {
+      "id": "c36dc1e4-b084-4bbe-a843-f1892cfc351f",
+      "action": "submit",
+      "signature": "aPGzk45wSLuNiM5d3G5BSAGFW3Xy3ih1CRKu2cDtTzE7dFshEXFs9U2zUJkyPxpub7cWpqXMc5DfKQh2JDPuuJe",
+      "explorer": "https://explorer.solana.com/tx/aPGzk45wSLuNiM5d3G5BSAGFW3Xy3ih1CRKu2cDtTzE7dFshEXFs9U2zUJkyPxpub7cWpqXMc5DfKQh2JDPuuJe?cluster=devnet"
+    },
+    {
+      "id": "c36dc1e4-b084-4bbe-a843-f1892cfc351f",
+      "action": "approve",
+      "signature": "bW8dS7fUXSrFroD569JFfjH6732dxXsL7jMs827fJgWiUBYPSmF6EwMRo1ZnzQGpm4s2XqQdSzkUuZTbVceVbHL",
+      "explorer": "https://explorer.solana.com/tx/bW8dS7fUXSrFroD569JFfjH6732dxXsL7jMs827fJgWiUBYPSmF6EwMRo1ZnzQGpm4s2XqQdSzkUuZTbVceVbHL?cluster=devnet"
+    },
+    {
+      "id": "794399b7-1303-41e2-8892-524f7159178c",
+      "action": "fund",
+      "signature": "D8xFpAF55SLMiJ7sKYc7ZWsV9fKCbWriwV3gLE8QopjXWo9jkfdtmwfxwerQ29Tmq6TUebH4j3gDdZgxjadHVpL",
+      "explorer": "https://explorer.solana.com/tx/D8xFpAF55SLMiJ7sKYc7ZWsV9fKCbWriwV3gLE8QopjXWo9jkfdtmwfxwerQ29Tmq6TUebH4j3gDdZgxjadHVpL?cluster=devnet"
+    },
+    {
+      "id": "794399b7-1303-41e2-8892-524f7159178c",
+      "action": "cancel",
+      "signature": "5fBa1BkRHL2kSr5o9FpS6k9xxbXHXnGqXUkWDeeoCvVwgoqE6pt7HcDkzFq3QAt7QL9V9o8ZuBCL9mPpRs9FFP7C",
+      "explorer": "https://explorer.solana.com/tx/5fBa1BkRHL2kSr5o9FpS6k9xxbXHXnGqXUkWDeeoCvVwgoqE6pt7HcDkzFq3QAt7QL9V9o8ZuBCL9mPpRs9FFP7C?cluster=devnet"
+    }
+  ]
+}

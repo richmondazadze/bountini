@@ -1,9 +1,292 @@
-'use client';
-import {useEffect,useRef,useState} from 'react';
-import {Conversation} from '@elevenlabs/client';
-import type {Draft} from '@/domain/bounty';
-import {api} from './header';
-import {Banner,Button,Icon} from './ui';
-type Proposal=Omit<Draft,'reward'>;
-export function DraftAssistant({onApply}:{onApply:(proposal:Proposal)=>void}){const [text,setText]=useState('');const [proposal,setProposal]=useState<Proposal|null>(null);const [error,setError]=useState('');const [pending,setPending]=useState(false);const [status,setStatus]=useState('disconnected');const [muted,setMuted]=useState(false);const [enabled,setEnabled]=useState({aiEnabled:false,voiceEnabled:false});const session=useRef<Awaited<ReturnType<typeof Conversation.startSession>>|null>(null);const generation=useRef(0);useEffect(()=>{api<typeof enabled>('/api/health').then(setEnabled).catch(()=>{});return()=>{generation.current++;void session.current?.endSession();session.current=null;};},[]);async function stop(){generation.current++;await session.current?.endSession();session.current=null;setStatus('disconnected');setMuted(false);}async function start(){setError('');setStatus('connecting');const attempt=++generation.current;try{const {signedUrl}=await api<{signedUrl:string}>('/api/voice/session',{method:'POST'});const active=await Conversation.startSession({signedUrl,connectionType:'websocket',onStatusChange:({status})=>setStatus(status),onMessage:({message,source})=>{if(source==='user')setText(t=>(t+'\n'+message).trim().slice(0,12000));},onError:()=>{setError('Voice connection interrupted. Your transcript is preserved; continue by typing.');void stop();},onDisconnect:()=>{session.current=null;setStatus('disconnected');}});if(generation.current!==attempt){await active.endSession();return;}session.current=active;}catch{setStatus('disconnected');setError('Microphone permission or voice connection failed. Continue by typing.');}}async function suggest(){setPending(true);setError('');await stop();try{const {result}=await api<{result:Proposal}>('/api/ai/draft',{method:'POST',body:JSON.stringify({text})});setProposal(result);}catch(e){setError(e instanceof Error?e.message:'Assistance unavailable. Continue manually.');}finally{setPending(false);}}return <section className="panel" style={{marginBottom:24}}><h3>Build a clearer brief</h3><p className="helper">Optional assistance. Sign in with your wallet first. Voice sends audio to ElevenLabs; generating a proposal sends this text to Gemini. The transcript stays in this screen until you apply or clear it. Provider retention depends on your account settings.</p>{error&&<Banner error>{error}</Banner>}<div className="field"><label htmlFor="assistant-input">Describe your task or edit your transcript</label><textarea id="assistant-input" value={text} onChange={e=>{setText(e.target.value);setProposal(null);}} maxLength={12000}/></div><div className="actions">{status==='disconnected'?<Button type="button" variant="secondary" disabled={!enabled.voiceEnabled||pending} onClick={start}><Icon name="mic"/>{enabled.voiceEnabled?'Start voice':'Voice unavailable'}</Button>:<><Button type="button" variant="secondary" onClick={stop}>Stop voice</Button><Button type="button" variant="quiet" disabled={!session.current} onClick={()=>{session.current?.setMicMuted(!muted);setMuted(!muted);}}>{muted?'Unmute':'Mute'}</Button></>}<Button type="button" disabled={!enabled.aiEnabled||text.trim().length<20} pending={pending} onClick={suggest}>Suggest requirements</Button><Button type="button" variant="quiet" onClick={()=>{void stop();setText('');setProposal(null);}}>Clear transcript</Button></div><p role="status" className="helper">{status==='connecting'?'Connecting microphone…':status==='connected'?(muted?'Microphone muted':'Voice active · Stop to finish'):'You can type at any time.'}{!enabled.aiEnabled?' AI assistance is not configured. Use the manual form below.':''}</p>{proposal&&<div style={{marginTop:24}}><h3>{proposal.title}</h3><p className="submission-text">{proposal.description}</p><ul>{proposal.requirements.map((r,i)=><li key={i}>{r}</li>)}</ul><Button type="button" onClick={()=>{onApply(proposal);setProposal(null);}}>Apply editable proposal</Button><p className="helper">Your reward is preserved. Review all fields before funding.</p></div>}</section>;}
-export function AdvisoryReview({bountyId}:{bountyId:string}){const [result,setResult]=useState<{summary:string;criteria:{criterion:string;evidence:string;concern:string;suggestedRevision:string}[]}|null>(null);const [pending,setPending]=useState(false);const [error,setError]=useState('');const [trace,setTrace]=useState('');async function review(){setPending(true);setError('');try{const r=await api<{result:NonNullable<typeof result>;model:string;createdAt:string;requirementsHash:string}>('/api/ai/review',{method:'POST',body:JSON.stringify({bountyId})});setResult(r.result);setTrace(`${r.model} · ${r.createdAt} · agreement ${r.requirementsHash}`);}catch(e){setError(e instanceof Error?e.message:'Review unavailable. Review manually.');}finally{setPending(false);}}return <section className="panel"><h3>Advisory review</h3><p className="helper">Requesting feedback sends the brief and confirmed submission to Gemini. You decide approval, revision or rejection. The review deadline continues while AI runs.</p><Button type="button" variant="secondary" pending={pending} onClick={review}>Review against checklist</Button>{error&&<Banner error>{error}</Banner>}{result&&<><p>{result.summary}</p>{result.criteria.map((c,i)=><div key={i}><h4>{c.criterion}</h4><p>Evidence: {c.evidence}</p><p>Concern: {c.concern}</p><p>Suggested revision: {c.suggestedRevision}</p></div>)}<p className="helper address">{trace}</p></>}</section>;}
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { Conversation } from "@elevenlabs/client";
+import type { Draft } from "@/domain/bounty";
+import { api } from "./header";
+import { Banner, Button, Icon } from "./ui";
+type Proposal = Omit<Draft, "reward">;
+export function DraftAssistant({
+  onApply,
+}: {
+  onApply: (proposal: Proposal) => void;
+}) {
+  const [text, setText] = useState("");
+  const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
+  const [status, setStatus] = useState("disconnected");
+  const [muted, setMuted] = useState(false);
+  const [enabled, setEnabled] = useState({
+    aiEnabled: false,
+    voiceEnabled: false,
+  });
+  const session = useRef<Awaited<
+    ReturnType<typeof Conversation.startSession>
+  > | null>(null);
+  const generation = useRef(0);
+  const transcriptEvents = useRef(new Set<number>());
+  useEffect(() => {
+    api<typeof enabled>("/api/health")
+      .then(setEnabled)
+      .catch(() => {});
+    return () => {
+      generation.current++;
+      void session.current?.endSession();
+      session.current = null;
+    };
+  }, []);
+  async function stop() {
+    generation.current++;
+    await session.current?.endSession();
+    session.current = null;
+    setStatus("disconnected");
+    setMuted(false);
+  }
+  async function start() {
+    setError("");
+    setStatus("connecting");
+    const attempt = ++generation.current;
+    try {
+      const { signedUrl } = await api<{ signedUrl: string }>(
+        "/api/voice/session",
+        { method: "POST" },
+      );
+      const active = await Conversation.startSession({
+        signedUrl,
+        connectionType: "websocket",
+        onStatusChange: ({ status }) => setStatus(status),
+        onMessage: ({ message, role, event_id }) => {
+          if (transcriptEvents.current.has(event_id)) return;
+          transcriptEvents.current.add(event_id);
+          if (message)
+            setText((t) =>
+              (t + "\n" + (role === "user" ? "You: " : "Bountini: ") + message)
+                .trim()
+                .slice(0, 6000),
+            );
+        },
+        onError: () => {
+          setError(
+            "Voice connection interrupted. Your transcript is preserved; continue by typing.",
+          );
+          void stop();
+        },
+        onDisconnect: () => {
+          session.current = null;
+          setStatus("disconnected");
+        },
+      });
+      if (generation.current !== attempt) {
+        await active.endSession();
+        return;
+      }
+      session.current = active;
+    } catch {
+      setStatus("disconnected");
+      setError(
+        "Microphone permission or voice connection failed. Continue by typing.",
+      );
+    }
+  }
+  async function suggest() {
+    setPending(true);
+    setError("");
+    await stop();
+    try {
+      const { result } = await api<{ result: Proposal }>("/api/ai/draft", {
+        method: "POST",
+        body: JSON.stringify({ text }),
+      });
+      setProposal(result);
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Assistance unavailable. Continue manually.",
+      );
+    } finally {
+      setPending(false);
+    }
+  }
+  return (
+    <section className="panel" style={{ marginBottom: 24 }}>
+      <h3>Build a clearer brief</h3>
+      <p className="helper">
+        Optional assistance. Sign in with your wallet first. Voice sends audio
+        to ElevenLabs; generating a proposal sends this text to Gemini. The
+        transcript stays in this screen until you apply or clear it. Provider
+        retention depends on your account settings.
+      </p>
+      {error && <Banner error>{error}</Banner>}
+      <div className="field">
+        <label htmlFor="assistant-input">
+          Describe your task or edit your transcript
+        </label>
+        <textarea
+          id="assistant-input"
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            setProposal(null);
+          }}
+          maxLength={6000}
+        />
+      </div>
+      <div className="actions">
+        {status === "disconnected" ? (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!enabled.voiceEnabled || pending}
+            onClick={start}
+          >
+            <Icon name="mic" />
+            {enabled.voiceEnabled ? "Start voice" : "Voice unavailable"}
+          </Button>
+        ) : (
+          <>
+            <Button type="button" variant="secondary" onClick={stop}>
+              Stop voice
+            </Button>
+            <Button
+              type="button"
+              variant="quiet"
+              disabled={!session.current}
+              onClick={() => {
+                session.current?.setMicMuted(!muted);
+                setMuted(!muted);
+              }}
+            >
+              {muted ? "Unmute" : "Mute"}
+            </Button>
+          </>
+        )}
+        <Button
+          type="button"
+          disabled={!enabled.aiEnabled || text.trim().length < 20}
+          pending={pending}
+          onClick={suggest}
+        >
+          Suggest requirements
+        </Button>
+        <Button
+          type="button"
+          variant="quiet"
+          onClick={() => {
+            void stop();
+            setText("");
+            transcriptEvents.current.clear();
+            setProposal(null);
+          }}
+        >
+          Clear transcript
+        </Button>
+      </div>
+      <p role="status" className="helper">
+        {status === "connecting"
+          ? "Connecting microphone…"
+          : status === "connected"
+            ? muted
+              ? "Microphone muted"
+              : "Voice active · Stop to finish"
+            : "You can type at any time."}
+        {!enabled.aiEnabled
+          ? " AI assistance is not configured. Use the manual form below."
+          : ""}
+      </p>
+      {proposal && (
+        <div style={{ marginTop: 24 }}>
+          <h3>{proposal.title}</h3>
+          <p className="submission-text">{proposal.description}</p>
+          <ul>
+            {proposal.requirements.map((r, i) => (
+              <li key={i}>{r}</li>
+            ))}
+          </ul>
+          <Button
+            type="button"
+            onClick={() => {
+              onApply(proposal);
+              setProposal(null);
+            }}
+          >
+            Apply editable proposal
+          </Button>
+          <p className="helper">
+            Your reward is preserved. Review all fields before funding.
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+export function AdvisoryReview({ bountyId }: { bountyId: string }) {
+  const [result, setResult] = useState<{
+    summary: string;
+    criteria: {
+      criterion: string;
+      evidence: string;
+      concern: string;
+      suggestedRevision: string;
+    }[];
+  } | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  const [trace, setTrace] = useState("");
+  async function review() {
+    setPending(true);
+    setError("");
+    try {
+      const r = await api<{
+        result: NonNullable<typeof result>;
+        model: string;
+        createdAt: string;
+        requirementsHash: string;
+      }>("/api/ai/review", {
+        method: "POST",
+        body: JSON.stringify({ bountyId }),
+      });
+      setResult(r.result);
+      setTrace(`${r.model} · ${r.createdAt} · agreement ${r.requirementsHash}`);
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Review unavailable. Review manually.",
+      );
+    } finally {
+      setPending(false);
+    }
+  }
+  return (
+    <section className="panel">
+      <h3>Advisory review</h3>
+      <p className="helper">
+        Requesting feedback sends the brief and confirmed submission to Gemini.
+        You decide approval, revision or rejection. The review deadline
+        continues while AI runs.
+      </p>
+      <Button
+        type="button"
+        variant="secondary"
+        pending={pending}
+        onClick={review}
+      >
+        Review against checklist
+      </Button>
+      {error && <Banner error>{error}</Banner>}
+      {result && (
+        <>
+          <p>{result.summary}</p>
+          {result.criteria.map((c, i) => (
+            <div key={i}>
+              <h4>{c.criterion}</h4>
+              <p>Evidence: {c.evidence}</p>
+              <p>Concern: {c.concern}</p>
+              <p>Suggested revision: {c.suggestedRevision}</p>
+            </div>
+          ))}
+          <p className="helper address">{trace}</p>
+        </>
+      )}
+    </section>
+  );
+}

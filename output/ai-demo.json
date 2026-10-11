@@ -1,0 +1,45 @@
+{
+  "draft": {
+    "result": {
+      "title": "Translate Community Meeting Announcement into Neutral Spanish",
+      "description": "Translate the provided announcement regarding the upcoming community meeting into neutral Spanish while preserving specific date and time details.",
+      "category": "Translation",
+      "requirements": [
+        "Translate the text: 'The community meeting starts at 10 AM on Saturday.' into neutral Spanish.",
+        "Preserve the time '10 AM' and day 'Saturday' accurately in the translation.",
+        "Submit the complete translated text."
+      ]
+    },
+    "model": "gemini-3.6-flash",
+    "promptVersion": "bountini-advisory-v1",
+    "createdAt": "2026-10-11T04:56:33.575Z"
+  },
+  "review": {
+    "result": {
+      "summary": "The submission successfully translates the provided text into neutral Spanish while accurately preserving the specified time and day. All criteria have been met without any concerns.",
+      "criteria": [
+        {
+          "criterion": "Translate the text: 'The community meeting starts at 10 AM on Saturday.' into neutral Spanish.",
+          "evidence": "\"La reunión de la comunidad comienza a las 10 a. m. el sábado.\"",
+          "concern": "None. The translation is accurate, natural, and uses neutral Spanish.",
+          "suggestedRevision": "None."
+        },
+        {
+          "criterion": "Preserve the time '10 AM' and day 'Saturday' accurately in the translation.",
+          "evidence": "\"10 a. m.\" and \"el sábado\" are used in the translation.",
+          "concern": "None. Both the time and day are accurately represented.",
+          "suggestedRevision": "None."
+        },
+        {
+          "criterion": "Submit the complete translated text.",
+          "evidence": "The full sentence \"La reunión de la comunidad comienza a las 10 a. m. el sábado.\" was submitted.",
+          "concern": "None. The complete text is provided.",
+          "suggestedRevision": "None."
+        }
+      ]
+    },
+    "model": "gemini-3.6-flash",
+    "promptVersion": "bountini-advisory-v1",
+    "createdAt": "2026-10-11T04:56:35.527Z"
+  }
+}

@@ -1,5 +1,5 @@
 "use client";
-import {AdvisoryReview} from "./assistance";
+import { AdvisoryReview } from "./assistance";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useWalletConnection, useSolanaClient } from "@solana/react-hooks";
@@ -50,6 +50,9 @@ export function Details({
     status: TransactionStatus;
     signature?: string;
   } | null>(null);
+  const [activity, setActivity] = useState<
+    { action: string; signature: string; updated_at: string }[]
+  >([]);
   const actor = wallet?.account.address;
   const load = useCallback(async () => {
     setError("");
@@ -58,6 +61,9 @@ export function Details({
         `/api/bounties/${id}`,
       );
       setB(r.bounty);
+      api<{ activity: typeof activity }>(`/api/bounties/${id}/activity`)
+        .then((r) => setActivity(r.activity))
+        .catch(() => {});
       setServerTime(r.serverTime);
       setClockOffset(r.serverTime - Date.now());
       try {
@@ -83,13 +89,14 @@ export function Details({
     void load();
     const refocus = () => void load();
     window.addEventListener("focus", refocus);
+    window.addEventListener("bountini-auth-change",refocus);
     try {
       const saved = localStorage.getItem(`bountini.operation.${id}`);
       if (saved) setOperation(JSON.parse(saved));
       const draft = localStorage.getItem(`bountini.submission.${id}`);
       if (draft) setText(draft);
     } catch {}
-    return () => window.removeEventListener("focus", refocus);
+    return () => {window.removeEventListener("focus", refocus);window.removeEventListener("bountini-auth-change",refocus);};
   }, [id, load]);
   useEffect(() => {
     const timer = setInterval(() => setClock(Date.now()), 1000);
@@ -105,6 +112,30 @@ export function Details({
         JSON.stringify(operation),
       );
   }, [id, operation]);
+  useEffect(() => {
+    if (
+      !operation ||
+      ["confirmed", "failed", "rejected"].includes(operation.status) ||
+      pending
+    )
+      return;
+    let cancelled = false;
+    const timer = setInterval(async () => {
+      try {
+        const r = await api<{
+          operation: { status: TransactionStatus; signature?: string };
+        }>(`/api/operations/${operation.id}`);
+        if (!cancelled) {
+          setOperation({ ...operation, ...r.operation });
+          if (r.operation.status === "confirmed") await load();
+        }
+      } catch {}
+    }, 6000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [operation, pending, load]);
   async function checkOperation() {
     if (!operation) return;
     setPending(true);
@@ -128,6 +159,8 @@ export function Details({
     let opId: string | undefined;
     let txSignature: string | undefined;
     try {
+      const session=await api<{wallet:string}>("/api/auth/session");
+      if(session.wallet!==actor)throw new Error("Sign in with your connected wallet before continuing.");
       const prepared = await api<{
         operationId: string;
         lifetime: { blockhash: string; lastValidBlockHeight: string };
@@ -307,7 +340,7 @@ export function Details({
                 Agreement SHA-256: {b.requirementsHash}
               </p>
             </section>
-            {b.deadline && (
+            {b.deadline && !["paid", "refunded"].includes(b.status) && (
               <section className="panel">
                 <h3>
                   {b.status === "revision-requested"
@@ -417,7 +450,7 @@ export function Details({
                       </>
                     )}
                     <Banner>
-                      Review is yours to make. AI assistance is not yet enabled.
+                      Review is yours to make. AI feedback is advisory only.
                     </Banner>
                   </section>
                 )}
@@ -449,13 +482,28 @@ export function Details({
                 <p>
                   Quest draft created · {new Date(b.createdAt).toLocaleString()}
                 </p>
+                {activity.map((event) => (
+                  <p key={event.signature}>
+                    <a
+                      href={`https://explorer.solana.com/tx/${event.signature}?cluster=devnet`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {event.action} · Confirmed ↗
+                    </a>
+                    <br />
+                    <span className="helper">
+                      {new Date(event.updated_at).toLocaleString()}
+                    </span>
+                  </p>
+                ))}
                 {b.signature && (
                   <a
                     href={`https://explorer.solana.com/tx/${b.signature}?cluster=devnet`}
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Latest verified Devnet transaction ↗
+                    Verified Devnet transaction ↗
                   </a>
                 )}
               </div>

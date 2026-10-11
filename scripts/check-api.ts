@@ -2,7 +2,7 @@ import { generateKeyPairSync, sign, randomUUID } from "node:crypto";
 import { getBase58Decoder } from "@solana/kit";
 import { neon } from "@neondatabase/serverless";
 import assert from "node:assert/strict";
-const origin = "http://localhost:3000";
+const origin = process.env.DEMO_ORIGIN || "http://localhost:3000";
 const { privateKey, publicKey } = generateKeyPairSync("ed25519");
 const wallet = getBase58Decoder().decode(
   publicKey.export({ format: "der", type: "spki" }).subarray(-32),
@@ -51,6 +51,13 @@ const draft = {
   requirements: ["Preserve the date, time and URL"],
   reward: "0.000000001",
 };
+for (const path of ["/api/ai/draft", "/api/ai/review", "/api/voice/session"]) {
+  const response = await request(path, {
+    text: draft.description,
+    bountyId: randomUUID(),
+  });
+  assert.equal(response.status, 401);
+}
 const unauth = await request("/api/bounties", draft);
 assert.equal(unauth.status, 401);
 const invalid = await request(
@@ -80,6 +87,21 @@ assert(
     (b: { id: string }) => b.id === bounty.id,
   ),
 );
+if (process.env.DEMO_ASSISTANCE === "true") {
+  const suggestion = await request(
+    "/api/ai/draft",
+    {
+      text: "Translate this announcement into neutral Spanish: The community meeting starts at 10 AM on Saturday. Preserve the date and time.",
+    },
+    cookie,
+  );
+  assert.equal(suggestion.status, 200, await suggestion.clone().text());
+  const voice = await request("/api/voice/session", {}, cookie);
+  assert.equal(voice.status, 200, await voice.clone().text());
+  const v = await voice.json();
+  assert.equal(new URL(v.signedUrl).protocol, "wss:");
+  console.log("Hosted AI requirements and authenticated voice session passed.");
+}
 const sql = neon(process.env.DATABASE_URL!);
 await sql.transaction([
   sql`DELETE FROM bounties WHERE id=${bounty.id} AND status='draft'`,

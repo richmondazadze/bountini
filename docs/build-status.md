@@ -1,15 +1,19 @@
 # Build status
 
-## Implemented
+The app is live at https://bountini.us on Vercel, backed by Neon PostgreSQL in AWS Ohio. The private source repository is https://github.com/richmondazadze/bountini. Porkbun apex DNS routes to Vercel; unrelated records remain intact.
 
-Next.js/React/Tailwind/Motion app with landing, Discover, Create, Details, Submit & Review, My Bountini and component gallery. Original Bountini artwork. Responsive layouts, accessible native selection/dialog controls, local draft persistence, wallet discovery and message sign-in. Exact SOL conversion and canonical agreement hashing. PostgreSQL migrations, private draft/submission authorization, single-use origin-bound wallet challenges and sessions. Signed transaction persistence before broadcast, operation recovery, finalized-chain reconciliation and background worker.
+## Implemented and verified
 
-Anchor program enforces fund, independent single claim, text submission hashes, approval, single revision, explicit rejection preserving review deadline, worker-signed withdrawal and requester refund/cancellation/expiry. Timely revision starts a fresh review window. No mainnet transactions.
+Landing, Discover with server search/filter/pagination, Create, Details, submission/review, My Bountini and component gallery. Wallet Standard connection and signed, origin-bound authentication; private drafts and submissions; exact SOL conversion; immutable agreement hashes; transaction persistence before broadcast, recovery and finalized-chain reconciliation.
 
-## Verified locally
+Anchor program deployed on Solana Devnet: DYf6RhzG8RLw3zhoa2C9RDXWkBJ2Qgss9Mnmarbk7fce. Against https://bountini.us, two independent signers completed real API-driven funding, claim, submission, requester approval/payout and cancellation/refund. Receipts are in output/devnet-demo.json. Only Devnet test SOL is used.
 
-Production web build and TypeScript checks. 24 domain/codec/SBF execution tests covering exact payout, wrong recipients, unauthorized actions, repeated settlement, exact deadlines, rejection-to-approval and both revision outcomes. Program deployed on local validator. Neon project bountini-devnet (holy-sun-76149658), free plan, AWS Ohio; migrations applied.
+24 domain, codec and compiled-SBF tests cover wrong recipients, unauthorized actions, repeated settlement, deadline boundaries, rejection followed by approval, withdrawal and both revision outcomes. TypeScript and production build pass. The initial GitHub CI run passed; final source changes are pushed for a new run. Deadline boundaries were simulated against compiled SBF; a full wall-clock expiry journey was not rehearsed on Devnet.
 
-## Pending release gates
+Gemini 3.6 Flash structured requirements and advisory review pass hosted API checks. The 3.8 Flash service returned temporary high-demand errors during release verification. An authenticated ElevenLabs agent is configured and its signed WebSocket conversation returned audio and a task clarification. Browser microphone/ASR interaction still needs a human walkthrough. Mobile 320px layouts show no horizontal overflow, and Escape restores dialog focus to its trigger. AI never authorizes payout. Server-only keys, per-wallet quotas and manual editing remain in place.
 
-Devnet program deployment and real two-wallet payout/refund receipts. Public RPC faucet is rate-limited; deployment wallet is awaiting test funding. Gemini and ElevenLabs remain disabled until manual Devnet gate passes. Hosting resources, domain and existing accounts were inspected. Vercel/Render deployment and DNS configuration still require completion. Design-canvas corrections and responsive/accessibility checks are in progress.
+The native design source has corrected component families, semantic modes, responsive specimens and chart layout. Updated PDF and ZIP are in output/.
+
+## Remaining operational approval
+
+Render's prepared always-on worker costs $7/month. It has not been deployed because purchasing services requires user approval. A local reconciliation worker is running during this session; API polling also reconciles operations. Continuous unattended reconciliation requires the hosted worker or another approved runtime. render.yaml contains the prepared configuration; its database secret must be supplied privately.

@@ -181,14 +181,46 @@ await act(
   "submit",
   "La reunión de la comunidad comienza a las 10 a. m. el sábado.",
 );
+const workerBefore = (
+  await rpc
+    .getBalance(worker.signer.address, { commitment: "finalized" })
+    .send()
+).value;
+if (process.env.DEMO_ASSISTANCE === "true") {
+  const { json: advice } = await api("/api/ai/review", requester, {
+    bountyId: id,
+  });
+  assert(advice.result.criteria.length > 0);
+  writeFileSync(
+    "output/deployed-ai-review.json",
+    JSON.stringify(advice, null, 2),
+  );
+}
 await act(id, requester, "approve");
+const workerAfter = (
+  await rpc
+    .getBalance(worker.signer.address, { commitment: "finalized" })
+    .send()
+).value;
+assert.equal(workerAfter - workerBefore, 1_000_000n);
 assert.equal(
   (await api(`/api/bounties/${id}`, requester)).json.bounty.status,
   "paid",
 );
 const refund = await draft("Devnet demonstration: cancellation refund");
 await act(refund, requester, "fund");
+const refundBefore = (
+  await rpc
+    .getBalance(requester.signer.address, { commitment: "finalized" })
+    .send()
+).value;
 await act(refund, requester, "cancel");
+const refundAfter = (
+  await rpc
+    .getBalance(requester.signer.address, { commitment: "finalized" })
+    .send()
+).value;
+assert.equal(refundAfter - refundBefore, 995_000n);
 assert.equal(
   (await api(`/api/bounties/${refund}`, requester)).json.bounty.status,
   "refunded",
@@ -198,6 +230,9 @@ writeFileSync(
   JSON.stringify(
     {
       network: "devnet",
+      appOrigin: origin,
+      verifiedPayoutLamports: "1000000",
+      verifiedRefundNetLamports: "995000",
       requester: requester.signer.address,
       worker: worker.signer.address,
       receipts,

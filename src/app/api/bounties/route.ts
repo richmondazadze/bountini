@@ -11,13 +11,23 @@ import {
 import { bountyFromRow } from "@/server/bounties";
 export async function GET(request: Request) {
   try {
-    const mine = new URL(request.url).searchParams.get("mine") === "true";
+    const params = new URL(request.url).searchParams;
+    const mine = params.get("mine") === "true";
+    const page = Number(params.get("page") || "0");
+    if (!Number.isInteger(page) || page < 0 || page > 10000)
+      throw new HttpError(400, "Invalid page");
+    const query = (params.get("q") || "").slice(0, 100);
+    const category = params.get("category") || "All categories";
+    const role = params.get("role") || "All";
+    const state = params.get("state") || "All states";
+    const wallet = mine ? await walletSession() : "";
     const sql = database();
-    const rows = mine
-      ? await sql`SELECT * FROM bounties WHERE requester=${await walletSession()} OR worker=${await walletSession()} ORDER BY created_at DESC LIMIT 100`
-      : await sql`SELECT * FROM bounties WHERE status!='draft' ORDER BY created_at DESC LIMIT 100`;
+    const rows =
+      await sql`SELECT * FROM bounties WHERE (${mine} AND (requester=${wallet} OR worker=${wallet}) OR NOT ${mine} AND status!='draft') AND (title ILIKE ${"%" + query + "%"} OR description ILIKE ${"%" + query + "%"}) AND (${category}='All categories' OR category=${category}) AND (${state}='All states' OR status=${state}) AND (${role}='All' OR ${role}='Posted' AND requester=${wallet} OR ${role}='Claimed' AND worker=${wallet}) ORDER BY created_at DESC,id DESC LIMIT 26 OFFSET ${page * 25}`;
+
     return Response.json({
-      bounties: rows.map(bountyFromRow),
+      bounties: rows.slice(0, 25).map(bountyFromRow),
+      hasMore: rows.length > 25,
       serverTime: Date.now(),
     });
   } catch (e) {

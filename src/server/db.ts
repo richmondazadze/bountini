@@ -18,14 +18,31 @@ export function database() {
 }
 export function failure(error: unknown) {
   const known = error instanceof HttpError;
+  if (!known) {
+    const detail = error as {
+      name?: string;
+      code?: string;
+      context?: { statusCode?: number; __code?: number };
+    };
+    console.error("Request failed", {
+      name: detail?.name,
+      code: detail?.code,
+      status: detail?.context?.statusCode,
+      rpcCode: detail?.context?.__code,
+    });
+  }
   return Response.json(
     { error: known ? error.message : "Request failed. Please try again." },
     { status: known ? error.status : 500 },
   );
 }
 export function requireOrigin(request: Request) {
-  const origin = process.env.APP_ORIGIN || "http://localhost:3000";
-  if (request.headers.get("origin") !== origin)
+  const origin = request.headers.get("origin");
+  const allowed = [
+    process.env.APP_ORIGIN || "http://localhost:3000",
+    ...(process.env.APP_ALLOWED_ORIGINS || "").split(",").filter(Boolean),
+  ];
+  if (!origin || !allowed.includes(origin))
     throw new HttpError(403, "Untrusted request origin");
   return origin;
 }
