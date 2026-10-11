@@ -2,12 +2,20 @@
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { beforeEach, afterEach, it, expect, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ actor: "worker", api: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  actor: "worker",
+  walletReady: true,
+  api: vi.fn(),
+  prepare: vi.fn(),
+  sign: vi.fn(),
+}));
 vi.mock("@solana/react-hooks", () => ({
   useWalletConnection: () => ({
     wallet: { account: { address: mocks.actor } },
   }),
-  useSolanaClient: () => ({}),
+  useSolanaClient: () => ({
+    transaction: { prepare: mocks.prepare, sign: mocks.sign },
+  }),
 }));
 vi.mock("../src/components/account-provider", () => ({
   useAccount: () => ({
@@ -15,8 +23,9 @@ vi.mock("../src/components/account-provider", () => ({
   }),
 }));
 vi.mock("../src/components/wallet-access", () => ({
-  useWalletAccess: () => true,
+  useWalletAccess: () => mocks.walletReady,
 }));
+vi.mock("../src/chain/network", () => ({ devnetRpc: async () => ({}) }));
 vi.mock("../src/components/workroom", () => ({ Workroom: () => null }));
 vi.mock("../src/components/header", () => ({ api: mocks.api }));
 vi.mock("../src/components/assistance", () => ({
@@ -35,7 +44,8 @@ vi.mock("../src/components/ui", () => ({
       {children}
     </button>
   ),
-  Dialog: () => null,
+  Dialog: ({ open, children }: React.PropsWithChildren<{ open: boolean }>) =>
+    open ? <div role="dialog">{children}</div> : null,
   Icon: () => null,
   Countdown: () => null,
   TransactionStatusView: () => null,
@@ -59,6 +69,9 @@ beforeEach(() => {
   });
   localStorage.clear();
   mocks.actor = "worker";
+  mocks.walletReady = true;
+  mocks.prepare.mockReset();
+  mocks.sign.mockReset();
   bounty = {
     id: "quest",
     title: "Translate announcement",
@@ -247,4 +260,108 @@ it("clears an old private draft when the new session cannot access it", async ()
   await act(async () => root.render(<Details id="quest" review />));
   expect(host.textContent).not.toContain("Original brief");
   expect(host.textContent).toContain("This draft is private");
+});
+
+it("freezes the summary before signing and preserves a submission after a rejected signature", async () => {
+  process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID =
+    "11111111111111111111111111111111";
+  localStorage.setItem(
+    "bountini.submission.v2:quest:qa",
+    "Completed private work",
+  );
+  const frozen = {
+    id: "frozen",
+    contentHash: "hash",
+    manifest: {
+      format: "bountini-deliverables-v1",
+      bountyId: "quest",
+      version: 0,
+      writtenResponse: "Completed private work",
+      links: [],
+      attachments: [],
+    },
+  };
+  const previous = mocks.api.getMockImplementation()!;
+  mocks.api.mockImplementation(async (path: string, options?: RequestInit) => {
+    if (path.endsWith("/prepare")) return frozen;
+    if (path === "/api/auth/session") return { wallet: "worker" };
+    if (path.endsWith("/operations") && options?.method === "POST")
+      return {
+        operationId: "op",
+        lifetime: {
+          blockhash: "11111111111111111111111111111111",
+          lastValidBlockHeight: "123",
+        },
+        instruction: {
+          programAddress: "11111111111111111111111111111111",
+          accounts: [],
+          data: [],
+        },
+      };
+    if (path === "/api/operations/op")
+      return { operation: { status: "rejected" } };
+    return previous(path, options);
+  });
+  mocks.prepare.mockResolvedValue({});
+  mocks.sign.mockRejectedValue(new Error("User rejected signature"));
+  await mount();
+  const click = async (label: string) => {
+    await act(async () =>
+      Array.from(host.querySelectorAll("button"))
+        .find((b) => b.textContent === label)!
+        .click(),
+    );
+  };
+  await click("Review submission summary");
+  expect(host.querySelector('[role="dialog"]')!.textContent).toContain(
+    "Manifest SHA-256: hash",
+  );
+  expect(mocks.sign).not.toHaveBeenCalled();
+  await click("Confirm & open wallet");
+  expect(host.textContent).toContain("User rejected signature");
+  expect(host.querySelector<HTMLTextAreaElement>("#submission")!.value).toBe(
+    "Completed private work",
+  );
+  const call = mocks.api.mock.calls.find(
+    ([path, options]) =>
+      path.endsWith("/operations") && options?.method === "POST",
+  )!;
+  expect(JSON.parse(call[1].body)).toEqual({
+    action: "submit",
+    manifestId: "frozen",
+  });
+  expect(mocks.api).toHaveBeenCalledWith(
+    "/api/operations/op",
+    expect.objectContaining({ body: JSON.stringify({ status: "rejected" }) }),
+  );
+  await click("Review submission summary");
+  expect(host.querySelector('[role="dialog"]')).not.toBeNull();
+});
+
+it("discards a pending summary response when wallet access is lost", async () => {
+  process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID =
+    "11111111111111111111111111111111";
+  localStorage.setItem("bountini.submission.v2:quest:qa", "Completed work");
+  let finish!: (value: unknown) => void;
+  const previous = mocks.api.getMockImplementation()!;
+  mocks.api.mockImplementation((path: string, options?: RequestInit) =>
+    path.endsWith("/prepare")
+      ? new Promise((resolve) => {
+          finish = resolve;
+        })
+      : previous(path, options),
+  );
+  await mount();
+  await act(async () =>
+    Array.from(host.querySelectorAll("button"))
+      .find((b) => b.textContent === "Review submission summary")!
+      .click(),
+  );
+  mocks.walletReady = false;
+  await act(async () => root.render(<Details id="quest" review />));
+  await act(async () =>
+    finish({ id: "stale", contentHash: "stale", manifest: {} }),
+  );
+  expect(host.querySelector('[role="dialog"]')).toBeNull();
+  expect(mocks.sign).not.toHaveBeenCalled();
 });

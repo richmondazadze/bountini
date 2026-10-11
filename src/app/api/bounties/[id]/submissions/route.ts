@@ -12,7 +12,7 @@ export async function GET(
     const sql = database();
     await participantAccount(id);
     const submissions =
-      await sql`SELECT body,revision,created_at FROM submissions WHERE bounty_id=${id} AND confirmed=true ORDER BY revision`;
+      await sql`SELECT s.body,s.revision,s.created_at,s.content_hash,m.manifest FROM submissions s LEFT JOIN submission_manifests m ON m.id=s.manifest_id AND m.confirmed=true WHERE s.bounty_id=${id} AND s.confirmed=true ORDER BY s.revision`;
     return Response.json(
       { submissions },
       { headers: { "Cache-Control": "private, no-store" } },

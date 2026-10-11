@@ -878,3 +878,18 @@ footer span:last-child {
   border-radius: 4px;
   background: var(--line, #e5e7eb);
 }
+
+.deliverable-file {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.deliverable-code {
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 16px;
+  background: var(--surface, #f5f5f5);
+  border-radius: 8px;
+}

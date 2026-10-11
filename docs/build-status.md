@@ -114,3 +114,11 @@ Explicit ElevenLabs `prepare_quest_draft` completion now prepares an unsaved edi
 
 
 Voice drafting follow-up: the requester confirmed the real microphone handoff succeeded. The agent now asks for and confirms a test-SOL reward, and its client tool populates an empty reward while preserving existing/concurrent entries. Gemini writes a polished self-contained description without an appended transcript. The transcript remains separate and editable. Live agent reward collection/tool delivery and real Gemini writing checks passed; 118 tests across 22 files, TypeScript and production build passed. See docs/audits/voice-drafting-2026-10-11.md for the follow-up scope and additional audio confirmation.
+
+## Complete deliverables — 2026-10-11
+
+Added combined written responses, labeled HTTPS links and private files, upload progress/retry, safe previews/downloads and a server-frozen summary before signing. Versioned manifests commit SHA-256 through the existing Anchor submission field; confirmed snapshots and attachment metadata are protected in Neon. Requesters can access original/revised confirmed deliverables and retain existing escrow review actions. Legacy text-only hashes remain compatible.
+
+Private Vercel Blob is connected on the existing free Hobby tier; no paid service was added. Each attachment is limited to 2 MiB, six per version. Authenticated five-minute access URLs repeat participant authorization on download. Daily cleanup removes only unbound abandoned uploads and retains all frozen attempts. Gemini 3.6 Flash receives bounded text/code, images and PDFs, with an explicit material inventory and no external URL fetching.
+
+142 tests, TypeScript and production build passed. A real local two-account Devnet journey verified attachment/link submission, original/revised on-chain manifest hashes, private access, duplicate/lost-response retries, rejected-signature recovery, database immutability, live Gemini, payout/refund and legacy text-only submission. Real storage cleanup retained confirmed objects. Hosted Git verification follows the finished push. Full limits, configuration and evidence: [deliverable-submissions.md](deliverable-submissions.md).

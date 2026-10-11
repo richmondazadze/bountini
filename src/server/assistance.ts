@@ -31,6 +31,9 @@ export async function gemini<T>(
   schema: z.ZodType<T>,
   instruction: string,
   input: unknown,
+  materials: (
+    { text: string } | { inlineData: { mimeType: string; data: string } }
+  )[] = [],
 ) {
   const key = process.env.GEMINI_API_KEY;
   if (!key)
@@ -57,7 +60,9 @@ export async function gemini<T>(
               },
             ],
           },
-          contents: [{ parts: [{ text: JSON.stringify(input) }] }],
+          contents: [
+            { parts: [{ text: JSON.stringify(input) }, ...materials] },
+          ],
           generationConfig: {
             responseMimeType: "application/json",
             responseJsonSchema: z.toJSONSchema(schema),

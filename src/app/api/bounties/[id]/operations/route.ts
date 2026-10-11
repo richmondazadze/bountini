@@ -13,6 +13,8 @@ import { address } from "@solana/kit";
 import { canAct, parseSOL, formatSOL } from "@/domain/bounty";
 import { devnetRpc } from "@/chain/network";
 import { escrowInstruction, bytesHex } from "@/chain/escrow";
+import { manifestHash } from "@/server/manifest";
+import type { Manifest } from "@/domain/deliverables";
 const schema = z.object({
   action: z.enum([
     "fund",
@@ -26,6 +28,7 @@ const schema = z.object({
     "withdraw",
   ]),
   content: z.string().trim().max(20000).optional(),
+  manifestId: z.uuid().optional(),
 });
 export async function POST(
   request: Request,
@@ -39,7 +42,7 @@ export async function POST(
       throw new HttpError(404, "Quest not found");
     const parsed = schema.safeParse(await jsonBody(request));
     if (!parsed.success) throw new HttpError(400, "Invalid action");
-    const { action, content } = parsed.data;
+    const { action, content, manifestId } = parsed.data;
     const program = process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID;
     if (!program)
       throw new HttpError(
@@ -76,7 +79,20 @@ export async function POST(
         `Check existing operation ${pending[0].id} before retrying`,
       );
     let hash: string | undefined;
-    if (["submit", "revise", "reject"].includes(action)) {
+    if (manifestId && action !== "submit")
+      throw new HttpError(400, "Manifests are only used for submission");
+    if (action === "submit" && manifestId) {
+      const frozen =
+        await sql`SELECT * FROM submission_manifests WHERE id=${manifestId} AND bounty_id=${id} AND worker=${actor} AND revision=${b.revisionUsed ? 1 : 0} AND confirmed=false`;
+      if (!frozen[0])
+        throw new HttpError(
+          409,
+          "Prepare a new submission for the current quest version",
+        );
+      hash = manifestHash(frozen[0].manifest as Manifest);
+      if (hash !== frozen[0].content_hash)
+        throw new HttpError(409, "Manifest integrity check failed");
+    } else if (["submit", "revise", "reject"].includes(action)) {
       if (!content)
         throw new HttpError(400, "Add submission text or specific feedback");
       hash = createHash("sha256")
@@ -110,9 +126,9 @@ export async function POST(
       program,
     );
     const statements = [
-      sql`INSERT INTO operations(id,bounty_id,actor,action,expected_data,expected_account,expected_blockhash,last_valid_block_height) VALUES(${operationId},${id},${actor},${action},${bytesHex(Uint8Array.from(instruction.data!))},${instruction.accounts![0].address},${lifetime.blockhash},${lifetime.lastValidBlockHeight.toString()})`,
+      sql`INSERT INTO operations(id,bounty_id,actor,action,expected_data,expected_account,expected_blockhash,last_valid_block_height,manifest_id) VALUES(${operationId},${id},${actor},${action},${bytesHex(Uint8Array.from(instruction.data!))},${instruction.accounts![0].address},${lifetime.blockhash},${lifetime.lastValidBlockHeight.toString()},${manifestId || null})`,
     ];
-    if (action === "submit")
+    if (action === "submit" && !manifestId)
       statements.push(
         sql`INSERT INTO submissions(id,bounty_id,worker,body,content_hash,revision) VALUES(${randomUUID()},${id},${actor},${content!},${hash!},${b.revisionUsed ? 1 : 0}) ON CONFLICT(bounty_id,revision) DO UPDATE SET body=EXCLUDED.body,content_hash=EXCLUDED.content_hash WHERE submissions.confirmed=false`,
       );

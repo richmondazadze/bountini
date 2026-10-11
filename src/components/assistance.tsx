@@ -507,6 +507,13 @@ export function DraftAssistant({
 }
 export function AdvisoryReview({ bountyId }: { bountyId: string }) {
   const walletReady = useWalletAccess();
+  const { me } = useAccount();
+  const { wallet } = useWalletConnection();
+  const identity = `${bountyId}:${me?.user.id}:${wallet?.account.address}:${walletReady}`;
+  const currentIdentity = useRef(identity);
+  currentIdentity.current = identity;
+  const generation = useRef(0);
+  const active = useRef(true);
   const [result, setResult] = useState<{
     summary: string;
     criteria: {
@@ -519,8 +526,37 @@ export function AdvisoryReview({ bountyId }: { bountyId: string }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [trace, setTrace] = useState("");
+  const [materials, setMaterials] = useState<
+    { label: string; status: string; detail: string }[]
+  >([]);
+  useEffect(() => {
+    active.current = true;
+    setResult(null);
+    setMaterials([]);
+    setTrace("");
+    setPending(false);
+    const invalidate = () => {
+      generation.current++;
+      setResult(null);
+      setMaterials([]);
+      setTrace("");
+      setPending(false);
+    };
+    window.addEventListener("bountini-auth-change", invalidate);
+    return () => {
+      active.current = false;
+      generation.current++;
+      window.removeEventListener("bountini-auth-change", invalidate);
+    };
+  }, [identity]);
   async function review() {
     if (!walletReady) return;
+    const owner = identity,
+      token = ++generation.current;
+    const valid = () =>
+      active.current &&
+      token === generation.current &&
+      currentIdentity.current === owner;
     setPending(true);
     setError("");
     try {
@@ -529,27 +565,32 @@ export function AdvisoryReview({ bountyId }: { bountyId: string }) {
         model: string;
         createdAt: string;
         requirementsHash: string;
+        materials: typeof materials;
       }>("/api/ai/review", {
         method: "POST",
         body: JSON.stringify({ bountyId }),
       });
+      if (!valid()) return;
       setResult(r.result);
+      setMaterials(r.materials || []);
       setTrace(`${r.model} · ${r.createdAt} · agreement ${r.requirementsHash}`);
     } catch (e) {
+      if (!valid()) return;
       setError(
         e instanceof Error ? e.message : "Review unavailable. Review manually.",
       );
     } finally {
-      setPending(false);
+      if (valid()) setPending(false);
     }
   }
   return (
     <section className="panel">
       <h3>Advisory review</h3>
       <p className="helper">
-        Requesting feedback sends the brief and confirmed submission to Gemini.
-        You decide approval, revision or rejection. The review deadline
-        continues while AI runs.
+        Requesting feedback sends the brief, written response and supported
+        private attachments to Gemini. Link destinations are not fetched. You
+        decide approval, revision or rejection. The review deadline continues
+        while AI runs.
       </p>
       {!walletReady && (
         <p className="helper">
@@ -570,6 +611,18 @@ export function AdvisoryReview({ bountyId }: { bountyId: string }) {
       {result && (
         <>
           <p>{result.summary}</p>
+          <h4>Materials supplied and limitations</h4>
+          <ul>
+            {materials.map((m, i) => (
+              <li key={i}>
+                <strong>{m.label}</strong> ·{" "}
+                {m.status === "supplied"
+                  ? "Supplied to Gemini"
+                  : "Not assessed"}
+                <p className="helper">{m.detail}</p>
+              </li>
+            ))}
+          </ul>
           {result.criteria.map((c, i) => (
             <div key={i}>
               <h4>{c.criterion}</h4>
