@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useWalletAccess } from "./wallet-access";
 import { accountHref } from "@/client/account-flow";
 import { useAccount } from "./account-provider";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, type SetStateAction } from "react";
 import { useWalletConnection } from "@solana/react-hooks";
 import { useRouter } from "next/navigation";
 import {
@@ -64,7 +64,12 @@ function CreateForm() {
   const { me } = useAccount();
   const { wallet } = useWalletConnection();
   const walletReady = useWalletAccess();
-  const [draft, setDraft] = useState<Draft>(empty);
+  const [draft, setDraftState] = useState<Draft>(empty);
+  const draftRevision = useRef(0);
+  function setDraft(value: SetStateAction<Draft>) {
+    draftRevision.current++;
+    setDraftState(value);
+  }
   const [loaded, setLoaded] = useState(false);
   const draftKey = `bountini.draft.v2:${me?.user.id || "guest"}`;
   const [review, setReview] = useState(false);
@@ -260,6 +265,8 @@ function CreateForm() {
                   </Button>
                 </div>
                 <DraftAssistant
+                  draft={draft}
+                  getDraftRevision={() => draftRevision.current}
                   onApply={(proposal) => {
                     setDraft((d) => ({ ...d, ...proposal }));
                     setAgree(false);

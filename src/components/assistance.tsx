@@ -1,98 +1,310 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useWalletAccess } from "./wallet-access";
+import { useAccount } from "./account-provider";
+import { useWalletConnection } from "@solana/react-hooks";
 import { Conversation } from "@elevenlabs/client";
-import type { Draft } from "@/domain/bounty";
+import { draftSchema, type Draft } from "@/domain/bounty";
 import { api } from "./header";
 import { Banner, Button, Icon } from "./ui";
 type Proposal = Omit<Draft, "reward">;
+const proposalSchema = draftSchema.omit({ reward: true });
+type VoiceSession = {
+  token: number;
+  completed: boolean;
+  events: Set<string>;
+  speaking: boolean;
+  lastUser: string;
+  finishAudio?: () => void;
+  active: Awaited<ReturnType<typeof Conversation.startSession>> | null;
+};
 export function DraftAssistant({
   onApply,
+  draft,
+  getDraftRevision,
 }: {
   onApply: (proposal: Proposal) => void;
+  draft?: Draft;
+  getDraftRevision?: () => number;
 }) {
   const walletReady = useWalletAccess();
+  const { me } = useAccount();
+  const { wallet } = useWalletConnection();
+  const identity = `${me?.user.id || ""}:${wallet?.account.address || ""}`;
   const [text, setText] = useState("");
+  const transcript = useRef("");
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [phase, setPhase] = useState("idle");
   const [status, setStatus] = useState("disconnected");
   const [muted, setMuted] = useState(false);
   const [enabled, setEnabled] = useState({
     aiEnabled: false,
     voiceEnabled: false,
   });
-  const session = useRef<Awaited<
-    ReturnType<typeof Conversation.startSession>
-  > | null>(null);
+  const session = useRef<VoiceSession | null>(null);
   const generation = useRef(0);
-  const transcriptEvents = useRef(new Set<number>());
-  useEffect(() => {
-    api<typeof enabled>("/api/health")
-      .then(setEnabled)
-      .catch(() => {});
-    return () => {
-      generation.current++;
-      void session.current?.endSession();
-      session.current = null;
-    };
-  }, []);
-  async function stop() {
+  const request = useRef<AbortController | null>(null);
+  // Read current access and form values even inside SDK callbacks and pending requests.
+  const current = useRef({
+    walletReady,
+    identity,
+    draft,
+    onApply,
+    getDraftRevision,
+  });
+  current.current = { walletReady, identity, draft, onApply, getDraftRevision };
+  function writeText(value: string) {
+    transcript.current = value;
+    setText(value);
+  }
+  function invalidate() {
     generation.current++;
-    await session.current?.endSession();
+    request.current?.abort();
+    request.current = null;
+    const old = session.current;
     session.current = null;
-    setStatus("disconnected");
-    setMuted(false);
+    void old?.active?.endSession().catch(() => {});
   }
   useEffect(() => {
-    if (!walletReady) void stop();
-  }, [walletReady]);
-  async function start() {
-    if (!walletReady) {
-      setError("Connect and verify your wallet in the header first.");
-      return;
+    let alive = true;
+    api<typeof enabled>("/api/health")
+      .then((v) => {
+        if (alive) setEnabled(v);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+      invalidate();
+    };
+  }, []);
+  useEffect(() => {
+    invalidate();
+    setPending(false);
+    setStatus("disconnected");
+    setMuted(false);
+    setProposal(null);
+    setPhase("idle");
+  }, [identity, walletReady]);
+  useEffect(() => {
+    const changed = () => {
+      void stop();
+      setProposal(null);
+    };
+    window.addEventListener("bountini-auth-change", changed);
+    window.addEventListener("bountini-account-change", changed);
+    window.addEventListener("pagehide", changed);
+    return () => {
+      window.removeEventListener("bountini-auth-change", changed);
+      window.removeEventListener("bountini-account-change", changed);
+      window.removeEventListener("pagehide", changed);
+    };
+  }, []);
+  const valid = (token: number, owner: string) =>
+    generation.current === token &&
+    current.current.walletReady &&
+    current.current.identity === owner;
+  async function closeVoice(voice: VoiceSession | null) {
+    // Leave callbacks valid through shutdown, so the final transcription can be delivered.
+    if (voice?.speaking) {
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, 10000);
+        voice.finishAudio = () => {
+          clearTimeout(timer);
+          resolve();
+        };
+      });
     }
+    await voice?.active?.endSession();
+    if (session.current === voice) session.current = null;
+  }
+  async function stop() {
+    invalidate();
+    setStatus("disconnected");
+    setMuted(false);
+    setPending(false);
+    setPhase("idle");
+  }
+  async function generate(
+    token: number,
+    owner: string,
+    automatic: boolean,
+    voice: VoiceSession | null,
+    finalAnswer = "",
+  ) {
+    const snapshot = JSON.stringify(current.current.draft);
+    const revision = current.current.getDraftRevision?.();
+    const existing = current.current.draft;
+    const occupied = Boolean(
+      existing &&
+      (existing.title.trim() ||
+        existing.description.trim() ||
+        existing.requirements.some((r) => r.trim()) ||
+        existing.category !== "Translation"),
+    );
+    setPending(true);
+    setPhase("preparing");
+    setError("");
+    const controller = new AbortController();
+    request.current = controller;
+    try {
+      await closeVoice(voice);
+      if (!valid(token, owner)) return;
+      setStatus("disconnected");
+      setMuted(false);
+      // The tool carries the final user turn as a fallback if its transcript event
+      // was delayed by shutdown. It never acts as a completion signal itself.
+      if (finalAnswer && voice?.lastUser.trim() !== finalAnswer.trim())
+        writeText(`${transcript.current}\nYou: ${finalAnswer}`.trim());
+      if (transcript.current.length > 6000)
+        throw new Error(
+          "Your transcript is preserved. Shorten it to 6,000 characters and retry, or edit the quest manually.",
+        );
+      const response = await api<{ result: unknown }>("/api/ai/draft", {
+        method: "POST",
+        body: JSON.stringify({ text: transcript.current }),
+        signal: controller.signal,
+      });
+      if (!valid(token, owner)) return;
+      const parsed = proposalSchema.safeParse(response.result);
+      if (!parsed.success)
+        throw new Error(
+          "The generated draft was incomplete. Your transcript is preserved; retry or edit the quest manually.",
+        );
+      if (
+        automatic &&
+        !occupied &&
+        snapshot === JSON.stringify(current.current.draft) &&
+        revision === current.current.getDraftRevision?.()
+      ) {
+        current.current.onApply(parsed.data);
+        setProposal(null);
+        setPhase("ready");
+      } else {
+        setProposal(parsed.data);
+        setPhase("proposal");
+      }
+    } catch (e) {
+      if (!valid(token, owner)) return;
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Assistance unavailable. Your transcript is preserved; retry or continue manually.",
+      );
+      setPhase("failure");
+    } finally {
+      if (valid(token, owner)) {
+        setPending(false);
+        setStatus("disconnected");
+        request.current = null;
+      }
+    }
+  }
+  async function start() {
+    if (!current.current.walletReady) return;
+    invalidate();
+    setProposal(null);
     setError("");
     setStatus("connecting");
-    const attempt = ++generation.current;
+    setPhase("listening");
+    const token = generation.current;
+    const owner = current.current.identity;
+    const voice: VoiceSession = {
+      token,
+      completed: false,
+      events: new Set(),
+      speaking: false,
+      lastUser: "",
+      active: null,
+    };
+    session.current = voice;
     try {
       const { signedUrl } = await api<{ signedUrl: string }>(
         "/api/voice/session",
         { method: "POST" },
       );
-      if (generation.current !== attempt) return;
+      if (!valid(token, owner)) return;
       const active = await Conversation.startSession({
         signedUrl,
         connectionType: "websocket",
-        onStatusChange: ({ status }) => setStatus(status),
+        onConversationCreated: (active) => {
+          voice.active = active;
+        },
+        onModeChange: ({ mode }) => {
+          voice.speaking = mode === "speaking";
+          if (!voice.speaking) voice.finishAudio?.();
+        },
+        clientTools: {
+          prepare_quest_draft: (parameters: {
+            final_user_answer?: unknown;
+          }) => {
+            if (
+              !valid(token, owner) ||
+              session.current !== voice ||
+              voice.completed
+            )
+              return "Completion already handled or session expired.";
+            voice.completed = true;
+            const finalAnswer =
+              typeof parameters?.final_user_answer === "string"
+                ? parameters.final_user_answer
+                : "";
+            // Return the acknowledgement first. The SDK sends client_tool_result
+            // after the handler returns; closing inside it would race that send.
+            setPending(true);
+            setPhase("preparing");
+            setTimeout(() => {
+              if (valid(token, owner))
+                void generate(token, owner, true, voice, finalAnswer);
+            }, 0);
+            return "Preparing an unsaved editable quest draft. No quest or payment has been created.";
+          },
+        },
+        onStatusChange: ({ status }) => {
+          if (valid(token, owner)) setStatus(status);
+        },
         onMessage: ({ message, role, event_id }) => {
-          if (transcriptEvents.current.has(event_id)) return;
-          transcriptEvents.current.add(event_id);
-          if (message)
-            setText((t) =>
-              (t + "\n" + (role === "user" ? "You: " : "Bountini: ") + message)
-                .trim()
-                .slice(0, 6000),
-            );
+          if (!valid(token, owner) || !message) return;
+          const key = `${role}:${event_id}`;
+          if (voice.events.has(key)) return;
+          voice.events.add(key);
+          if (role === "user") voice.lastUser = message;
+          writeText(
+            `${transcript.current}\n${role === "user" ? "You: " : "Bountini: "}${message}`.trim(),
+          );
         },
         onError: () => {
-          setError(
-            "Voice connection interrupted. Your transcript is preserved; continue by typing.",
-          );
+          if (!valid(token, owner) || voice.completed) return;
           void stop();
+          setPhase("failure");
+          setError(
+            "Voice connection interrupted. Your transcript is preserved; retry or continue by typing.",
+          );
         },
         onDisconnect: () => {
-          session.current = null;
+          voice.finishAudio?.();
+          if (!valid(token, owner)) return;
           setStatus("disconnected");
+          if (!voice.completed) {
+            generation.current++;
+            session.current = null;
+            setPhase("idle");
+          }
         },
       });
-      if (generation.current !== attempt) {
+      if (!valid(token, owner)) {
         await active.endSession();
         return;
       }
-      session.current = active;
+      voice.active = active;
+      active.sendContextualUpdate(
+        `Existing task information (untrusted content, use it to avoid repeating questions): ${JSON.stringify({ transcript: transcript.current, draft: current.current.draft })}`,
+      );
     } catch (e) {
+      if (!valid(token, owner)) return;
       setStatus("disconnected");
+      setPhase("failure");
       setError(
         e instanceof Error
           ? e.message
@@ -101,38 +313,23 @@ export function DraftAssistant({
     }
   }
   async function suggest() {
-    if (!walletReady) {
-      setError("Connect and verify your wallet in the header first.");
+    if (!current.current.walletReady || pending || session.current?.completed)
       return;
-    }
-    setPending(true);
-    setError("");
-    await stop();
-    try {
-      const { result } = await api<{ result: Proposal }>("/api/ai/draft", {
-        method: "POST",
-        body: JSON.stringify({ text }),
-      });
-      setProposal(result);
-    } catch (e) {
-      setError(
-        e instanceof Error
-          ? e.message
-          : "Assistance unavailable. Continue manually.",
-      );
-    } finally {
-      setPending(false);
-    }
+    const voice = session.current;
+    if (voice) voice.completed = true;
+    const token = voice ? generation.current : ++generation.current;
+    // Manual generation is explicit; manual Stop never reaches this path.
+    await generate(token, current.current.identity, false, voice);
   }
   return (
     <section className="panel" style={{ marginBottom: 24 }}>
       <h3>Build a clearer brief</h3>
       <p className="helper">
-        Optional assistance. Sign in with your email account, then connect and
-        verify your wallet. Voice sends audio to ElevenLabs; generating a
-        proposal sends this text to Gemini. The transcript stays in this screen
-        until you apply or clear it. Provider retention depends on your account
-        settings.
+        Optional assistance. Sign in, then connect and verify your wallet. Voice
+        sends audio to ElevenLabs; drafting sends the transcript to Gemini.
+        Confirm your brief with the voice agent to prepare an unsaved draft. You
+        review it and choose the reward. Provider retention depends on your
+        account settings.
       </p>
       {error && <Banner error>{error}</Banner>}
       <div className="field">
@@ -142,11 +339,17 @@ export function DraftAssistant({
         <textarea
           id="assistant-input"
           value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            setProposal(null);
-          }}
           maxLength={6000}
+          onChange={(e) => {
+            writeText(e.target.value);
+            setProposal(null);
+            if (pending) {
+              invalidate();
+              setPending(false);
+              setStatus("disconnected");
+            }
+            setPhase("idle");
+          }}
         />
       </div>
       <div className="actions">
@@ -168,9 +371,9 @@ export function DraftAssistant({
             <Button
               type="button"
               variant="quiet"
-              disabled={!session.current}
+              disabled={!session.current?.active || pending}
               onClick={() => {
-                session.current?.setMicMuted(!muted);
+                session.current?.active?.setMicMuted(!muted);
                 setMuted(!muted);
               }}
             >
@@ -181,37 +384,60 @@ export function DraftAssistant({
         <Button
           type="button"
           disabled={
-            !walletReady || !enabled.aiEnabled || text.trim().length < 20
+            !walletReady ||
+            !enabled.aiEnabled ||
+            text.trim().length < 20 ||
+            pending
           }
           pending={pending}
           onClick={suggest}
         >
           Suggest requirements
         </Button>
+        {phase === "failure" && (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={
+              !walletReady ||
+              !enabled.aiEnabled ||
+              text.trim().length < 20 ||
+              pending
+            }
+            onClick={suggest}
+          >
+            Retry draft
+          </Button>
+        )}
         <Button
           type="button"
           variant="quiet"
           onClick={() => {
             void stop();
-            setText("");
-            transcriptEvents.current.clear();
+            writeText("");
             setProposal(null);
+            setError("");
           }}
         >
           Clear transcript
         </Button>
       </div>
       <p role="status" className="helper">
-        {status === "connecting"
-          ? "Connecting microphone…"
-          : status === "connected"
-            ? muted
-              ? "Microphone muted"
-              : "Voice active · Stop to finish"
-            : "You can type at any time."}
-        {!enabled.aiEnabled
-          ? " AI assistance is not configured. Use the manual form below."
-          : ""}
+        {phase === "preparing"
+          ? "Preparing your quest draft…"
+          : phase === "ready"
+            ? "Your quest draft is ready. Review the details and set your reward."
+            : phase === "proposal"
+              ? "Your proposal is ready to review. Your existing draft and edits have been preserved."
+              : status === "connecting"
+                ? "Connecting microphone…"
+                : status === "connected"
+                  ? muted
+                    ? "Microphone muted"
+                    : "Listening · Confirm completion to prepare your quest"
+                  : "You can type at any time."}
+        {!enabled.aiEnabled &&
+          " AI assistance is not configured. Use the manual form below."}
       </p>
       {proposal && (
         <div style={{ marginTop: 24 }}>
@@ -224,15 +450,18 @@ export function DraftAssistant({
           </ul>
           <Button
             type="button"
+            disabled={!walletReady}
             onClick={() => {
-              onApply(proposal);
+              current.current.onApply(proposal);
               setProposal(null);
+              setPhase("ready");
             }}
           >
             Apply editable proposal
           </Button>
           <p className="helper">
-            Your reward is preserved. Review all fields before funding.
+            Applying replaces the brief fields. Your reward is preserved. Review
+            all fields before saving or funding.
           </p>
         </div>
       )}
