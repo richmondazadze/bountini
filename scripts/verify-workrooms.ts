@@ -172,13 +172,50 @@ try {
   await api(
     "/api/notifications",
     worker,
-    { throughId: String(notifications.notifications[0].id) },
+    { ids: [String(notifications.notifications[0].id)] },
     "PATCH",
   );
   assert.equal(
     (await (await api("/api/notifications", worker)).json()).unread,
     0,
   );
+  // More than one dashboard's worth of updates, plus another user's ID.
+  for (let i = 0; i < 12; i++) {
+    await pool.query(
+      "INSERT INTO notifications(user_id,bounty_id,event_key,kind,body) VALUES($1,$2,$3,'qa','Controlled update')",
+      [worker.id, bountyId, run + "-update-" + i],
+    );
+  }
+  const foreign = await pool.query(
+    "INSERT INTO notifications(user_id,bounty_id,event_key,kind,body) VALUES($1,$2,$3,'qa','Private update') RETURNING id",
+    [outsider.id, bountyId, run + "-foreign"],
+  );
+  const updates = await (await api("/api/notifications", worker)).json();
+  const displayed = updates.notifications
+    .slice(0, 8)
+    .map((n: { id: string }) => String(n.id));
+  const marked = await api(
+    "/api/notifications",
+    worker,
+    { ids: [...displayed, String(foreign.rows[0].id)] },
+    "PATCH",
+  );
+  assert.equal(marked.status, 200);
+  assert.equal((await marked.json()).unread, 4);
+  const remaining = await (await api("/api/notifications", worker)).json();
+  assert.equal(remaining.unread, 4);
+  assert.equal(
+    remaining.notifications.filter(
+      (n: { read_at: string | null }) => !n.read_at,
+    ).length,
+    4,
+  );
+  const [foreignUnread] = (
+    await pool.query("SELECT read_at FROM notifications WHERE id=$1", [
+      foreign.rows[0].id,
+    ])
+  ).rows;
+  assert.equal(foreignUnread.read_at, null);
   assert.equal(
     (await (await api("/api/bounties?mine=true&role=Claimed", worker)).json())
       .bounties[0].id,

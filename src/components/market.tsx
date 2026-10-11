@@ -26,9 +26,11 @@ export function Market({
   const [hasMore, setHasMore] = useState(false);
   const [morePending, setMorePending] = useState(false);
   const loadSequence = useRef(0);
+  const refreshing = useRef(false);
   const load = useCallback(
     async (quiet = false) => {
       const sequence = ++loadSequence.current;
+      refreshing.current = true;
       if (!quiet) setLoading(true);
       setError("");
       try {
@@ -44,16 +46,17 @@ export function Market({
           `/api/bounties?${params}`,
         );
         if (sequence !== loadSequence.current) return;
-        setBounties((previous) =>
-          quiet ? [...r.bounties, ...previous.slice(25)] : r.bounties,
-        );
+        setBounties(r.bounties);
         setHasMore(r.hasMore);
-        if (!quiet) setPage(0);
+        setPage(0);
       } catch (e) {
         if (!quiet && sequence === loadSequence.current)
           setError(e instanceof Error ? e.message : "Unable to load quests");
       } finally {
-        if (sequence === loadSequence.current) setLoading(false);
+        if (sequence === loadSequence.current) {
+          refreshing.current = false;
+          setLoading(false);
+        }
       }
     },
     [mine, query, category, view, state, me?.user.id],
@@ -89,6 +92,9 @@ export function Market({
   const Heading = mine && fixedRole ? "h2" : "h1";
   const workerView = fixedRole === "Claimed";
   async function more() {
+    if (refreshing.current || morePending) return;
+    const sequence = loadSequence.current;
+    const nextPage = page + 1;
     setMorePending(true);
     try {
       const params = new URLSearchParams({
@@ -97,19 +103,21 @@ export function Market({
         category,
         role: mine ? view : "All",
         state,
-        page: String(page + 1),
+        page: String(nextPage),
       });
       const r = await api<{ bounties: Bounty[]; hasMore: boolean }>(
         `/api/bounties?${params}`,
       );
+      if (sequence !== loadSequence.current) return;
       setBounties((previous) => [
         ...previous,
         ...r.bounties.filter((next) => !previous.some((b) => b.id === next.id)),
       ]);
       setHasMore(r.hasMore);
-      setPage((p) => p + 1);
+      setPage(nextPage);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to load more quests");
+      if (sequence === loadSequence.current)
+        setError(e instanceof Error ? e.message : "Unable to load more quests");
     } finally {
       setMorePending(false);
     }

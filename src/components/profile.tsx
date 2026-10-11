@@ -65,7 +65,7 @@ export function Profile() {
         Your display name, bio, skills and portfolio appear on your public
         profile. Your email stays private.
       </p>
-      <p className="muted">{me.user.email} · Verified email</p>
+      <p className="muted">{me.user.email}</p>
       {error && <Banner error>{error}</Banner>}
       {notice && <Banner>{notice}</Banner>}
       <form className="account-form" onSubmit={save}>

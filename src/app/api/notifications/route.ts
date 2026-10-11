@@ -28,11 +28,24 @@ export async function PATCH(request: Request) {
     requireOrigin(request);
     const { user } = await accountSession();
     const p = z
-      .object({ throughId: z.string().regex(/^\d+$/) })
+      .object({
+        ids: z
+          .array(
+            z
+              .string()
+              .regex(/^[1-9]\d*$/)
+              .refine((id) => BigInt(id) <= 9223372036854775807n),
+          )
+          .min(1)
+          .max(50),
+      })
       .safeParse(await jsonBody(request));
     if (!p.success) throw new HttpError(400, "Invalid notification");
-    await database()`UPDATE notifications SET read_at=now() WHERE user_id=${user.id} AND id<=${p.data.throughId}::bigint AND read_at IS NULL`;
-    return Response.json({ saved: true });
+    const sql = database();
+    await sql`UPDATE notifications SET read_at=now() WHERE user_id=${user.id} AND id IN (SELECT value::bigint FROM jsonb_array_elements_text(${JSON.stringify(p.data.ids)}::jsonb)) AND read_at IS NULL`;
+    const [count] =
+      await sql`SELECT count(*) AS unread FROM notifications WHERE user_id=${user.id} AND read_at IS NULL`;
+    return Response.json({ saved: true, unread: Number(count.unread) });
   } catch (e) {
     return failure(e);
   }

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAccount } from "./account-provider";
@@ -21,7 +21,10 @@ export function Dashboard() {
   const [pending, setPending] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
+  const [readPending, setReadPending] = useState(false);
+  const notificationVersion = useRef(0);
   useEffect(() => {
+    notificationVersion.current++;
     let stopped = false;
     let timer: ReturnType<typeof setTimeout>;
     const load = async (force = false) => {
@@ -31,11 +34,12 @@ export function Dashboard() {
           (force ||
             (document.visibilityState === "visible" && navigator.onLine))
         ) {
+          const version = notificationVersion.current;
           const r = await api<{
             notifications: Notification[];
             unread: number;
           }>("/api/notifications", { cache: "no-store" });
-          if (!stopped) {
+          if (!stopped && version === notificationVersion.current) {
             setNotifications(r.notifications);
             setUnread(r.unread);
           }
@@ -164,23 +168,38 @@ export function Dashboard() {
                   </Link>
                 ))}
               </div>
-              {unread > 0 && (
+              {notifications.slice(0, 8).some((n) => !n.read_at) && (
                 <Button
                   variant="quiet"
+                  disabled={readPending}
                   onClick={async () => {
+                    const ids = notifications
+                      .slice(0, 8)
+                      .map((n) => String(n.id));
+                    setReadPending(true);
+                    const version = ++notificationVersion.current;
                     try {
-                      await api("/api/notifications", {
-                        method: "PATCH",
-                        body: JSON.stringify({
-                          throughId: String(notifications[0].id),
-                        }),
-                      });
-                      setUnread(0);
+                      const result = await api<{ unread: number }>(
+                        "/api/notifications",
+                        {
+                          method: "PATCH",
+                          body: JSON.stringify({
+                            ids,
+                          }),
+                        },
+                      );
+                      if (version !== notificationVersion.current) return;
+                      notificationVersion.current++;
+                      setUnread(result.unread);
                       setNotifications((items) =>
-                        items.map((n) => ({
-                          ...n,
-                          read_at: new Date().toISOString(),
-                        })),
+                        items.map((n) =>
+                          ids.includes(String(n.id))
+                            ? {
+                                ...n,
+                                read_at: n.read_at || new Date().toISOString(),
+                              }
+                            : n,
+                        ),
                       );
                     } catch (e) {
                       setError(
@@ -188,6 +207,8 @@ export function Dashboard() {
                           ? e.message
                           : "Unable to mark updates read",
                       );
+                    } finally {
+                      setReadPending(false);
                     }
                   }}
                 >

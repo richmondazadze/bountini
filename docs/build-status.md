@@ -93,3 +93,9 @@ At the user's request, mandatory email confirmation is removed. Signup creates a
 67 tests, TypeScript and local production build passed. Real database-backed authentication checks passed immediate signup/login without confirmation, hashing, origin protection, single-use password recovery and session revocation. The unrelated motion project is excluded from the web TypeScript build and Vercel upload; its files are preserved.
 
 Immediate-signup production deployment: dpl_38tK93wjP87JU9HZe393gjYx5FKW. Hosted registration returned a session and /api/me granted access while emailVerified remained false; subsequent password sign-in succeeded. Verification sending returned 404. Controlled test account removed. Hosted signup UI has no confirmation/resend flow.
+
+## Dashboard updates, quest pagination and profile corrections — 2026-10-11
+
+Notification reads now accept explicit IDs scoped to the signed-in account. The dashboard sends only its eight displayed IDs and retains the server's remaining unread count; polling cannot overwrite a completed read with an older response. Quest refreshes consistently reset the entire loaded list and pagination to page zero, and discard stale load-more responses. Profiles show the private account email without falsely claiming verification.
+
+78 tests, TypeScript and the production build passed. Regression coverage includes unseen notification counts, ID validation and account boundaries, multi-page refresh resets, delayed pagination responses, and unconfirmed profile rendering. The hosted workroom verification now additionally checks twelve unread updates and another account's notification ID.
