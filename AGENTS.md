@@ -7,3 +7,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Production deployment
+
+Vercel is connected to GitHub and deploys main automatically. Commit and push the finished change once, then verify the resulting Git deployment. Do not run `vercel --prod` in addition to a push. Use manual production deployment only for an explicitly requested recovery or when Git deployment is unavailable; explain that exception. Never deploy uncommitted source as a normal release.
