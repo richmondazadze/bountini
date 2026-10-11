@@ -11,6 +11,12 @@ import {
   blockhash,
 } from "@solana/kit";
 import { createBountiniClient, WALLET_CHAIN } from "../src/client/wallet";
+const metamaskSigner = vi.hoisted(() =>
+  vi.fn(async (transaction) => transaction),
+);
+vi.mock("../src/client/metamask", () => ({
+  signMetaMaskDevnet: metamaskSigner,
+}));
 beforeEach(() => {
   vi.stubGlobal("window", {});
   vi.stubGlobal(
@@ -31,7 +37,7 @@ beforeEach(() => {
   );
 });
 afterEach(() => vi.unstubAllGlobals());
-function fixture() {
+function fixture(name = "Test wallet") {
   const first: WalletAccount = {
     address: "11111111111111111111111111111111",
     publicKey: new Uint8Array(32),
@@ -59,7 +65,7 @@ function fixture() {
   );
   const wallet = {
     version: "1.0.0",
-    name: "Test wallet",
+    name,
     icon: "data:image/svg+xml;base64,PHN2Zy8+",
     accounts: [first],
     chains: first.chains,
@@ -143,5 +149,31 @@ it("disconnects on an empty account event", async () => {
   await vi.waitFor(() =>
     expect(f.client.store.getState().wallet.status).toBe("disconnected"),
   );
+  f.client.destroy();
+});
+it("routes MetaMask sign-only requests through the explicit Devnet API using the current account", async () => {
+  const f = fixture("MetaMask");
+  await f.client.actions.connectWallet(f.connector.id);
+  f.change([f.second]);
+  const current = f.client.store.getState().wallet;
+  if (current.status !== "connected") throw new Error("Not connected");
+  const tx = compileTransaction(
+    setTransactionMessageLifetimeUsingBlockhash(
+      {
+        blockhash: blockhash("11111111111111111111111111111111"),
+        lastValidBlockHeight: 100n,
+      },
+      setTransactionMessageFeePayer(
+        address(f.second.address),
+        createTransactionMessage({ version: 0 }),
+      ),
+    ),
+  ) as unknown as Parameters<
+    NonNullable<typeof current.session.signTransaction>
+  >[0];
+  await current.session.signTransaction!(tx);
+  expect(metamaskSigner).toHaveBeenCalledWith(tx, f.second.address);
+  expect(f.signTransaction).not.toHaveBeenCalled();
+  expect(current.session.sendTransaction).toBeUndefined();
   f.client.destroy();
 });

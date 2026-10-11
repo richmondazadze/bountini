@@ -5,6 +5,7 @@ import {
   type WalletConnector,
   type WalletSession,
 } from "@solana/client";
+import { signMetaMaskDevnet } from "./metamask";
 
 export const WALLET_CHAIN = "solana:devnet";
 
@@ -47,7 +48,29 @@ export function createBountiniClient(connectors?: readonly WalletConnector[]) {
                   listener(accounts);
                 })
             : undefined;
-        return { ...original, onAccountsChanged: subscribe };
+        return {
+          ...original,
+          onAccountsChanged: subscribe,
+          ...(connector.name.toLowerCase().includes("metamask")
+            ? {
+                sendTransaction: undefined,
+                signTransaction: async (
+                  transaction: Parameters<typeof signMetaMaskDevnet>[0],
+                ) => {
+                  const current = client.store.getState().wallet;
+                  if (
+                    current.status !== "connected" ||
+                    current.session.onAccountsChanged !== subscribe
+                  )
+                    throw new Error("Reconnect MetaMask before signing.");
+                  return signMetaMaskDevnet(
+                    transaction,
+                    current.session.account.address,
+                  );
+                },
+              }
+            : {}),
+        };
       },
     })),
   });
