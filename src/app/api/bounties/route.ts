@@ -1,5 +1,6 @@
 import { randomUUID, createHash } from "node:crypto";
 import { draftSchema, canonicalAgreement, parseSOL } from "@/domain/bounty";
+import { accountSession } from "@/server/accounts";
 import { walletSession } from "@/server/auth";
 import {
   database,
@@ -20,10 +21,10 @@ export async function GET(request: Request) {
     const category = params.get("category") || "All categories";
     const role = params.get("role") || "All";
     const state = params.get("state") || "All states";
-    const wallet = mine ? await walletSession() : "";
+    const userId = mine ? (await accountSession()).user.id : null;
     const sql = database();
     const rows =
-      await sql`SELECT * FROM bounties WHERE (${mine} AND (requester=${wallet} OR worker=${wallet}) OR NOT ${mine} AND status!='draft') AND (title ILIKE ${"%" + query + "%"} OR description ILIKE ${"%" + query + "%"}) AND (${category}='All categories' OR category=${category}) AND (${state}='All states' OR status=${state}) AND (${role}='All' OR ${role}='Posted' AND requester=${wallet} OR ${role}='Claimed' AND worker=${wallet}) ORDER BY created_at DESC,id DESC LIMIT 26 OFFSET ${page * 25}`;
+      await sql`SELECT bounties.*,ru.name AS requester_name,wu.name AS worker_name,ru.id AS requester_user_id,wu.id AS worker_user_id FROM bounties LEFT JOIN wallet_links rw ON rw.wallet=bounties.requester LEFT JOIN auth_users ru ON ru.id=rw.user_id LEFT JOIN wallet_links ww ON ww.wallet=bounties.worker LEFT JOIN auth_users wu ON wu.id=ww.user_id WHERE (${mine} AND EXISTS(SELECT 1 FROM wallet_links w WHERE w.user_id=${userId} AND w.wallet IN(bounties.requester,bounties.worker)) OR NOT ${mine} AND status!='draft') AND (title ILIKE ${"%" + query + "%"} OR description ILIKE ${"%" + query + "%"}) AND (${category}='All categories' OR category=${category}) AND (${state}='All states' OR status=${state}) AND (${role}='All' OR ${role}='Posted' AND EXISTS(SELECT 1 FROM wallet_links w WHERE w.user_id=${userId} AND w.wallet=bounties.requester) OR ${role}='Claimed' AND EXISTS(SELECT 1 FROM wallet_links w WHERE w.user_id=${userId} AND w.wallet=bounties.worker)) ORDER BY bounties.created_at DESC,bounties.id DESC LIMIT 26 OFFSET ${page * 25}`;
 
     return Response.json({
       bounties: rows.slice(0, 25).map(bountyFromRow),

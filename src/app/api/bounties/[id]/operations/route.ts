@@ -59,6 +59,15 @@ export async function POST(
         403,
         "Action is unavailable for this wallet, state or deadline",
       );
+    if (action === "claim") {
+      const sameAccount =
+        await sql`SELECT 1 FROM wallet_links requester JOIN wallet_links actor ON actor.user_id=requester.user_id WHERE requester.wallet=${b.requester} AND actor.wallet=${actor}`;
+      if (sameAccount[0])
+        throw new HttpError(
+          403,
+          "You cannot claim your own quest from another linked wallet",
+        );
+    }
     const pending =
       await sql`SELECT id FROM operations WHERE bounty_id=${id} AND actor=${actor} AND status IN ('waiting-wallet','submitting','confirming','unknown') ORDER BY created_at DESC LIMIT 1`;
     if (pending[0])

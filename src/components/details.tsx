@@ -1,4 +1,6 @@
 "use client";
+import { Workroom } from "./workroom";
+import { useAccount } from "./account-provider";
 import { AdvisoryReview } from "./assistance";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -26,15 +28,16 @@ import {
   Countdown,
   TransactionStatusView,
 } from "./ui";
-export function Details({
-  id,
-  review = false,
-}: {
-  id: string;
-  review?: boolean;
-}) {
+export function Details(props: { id: string; review?: boolean }) {
+  const { me } = useAccount();
+  return (
+    <DetailsView key={`${props.id}:${me?.user.id || "guest"}`} {...props} />
+  );
+}
+function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
   const { wallet } = useWalletConnection();
   const client = useSolanaClient();
+  const { me } = useAccount();
   const [b, setB] = useState<Bounty | null>(null);
   const [serverTime, setServerTime] = useState(Date.now());
   const [clockOffset, setClockOffset] = useState(0);
@@ -130,7 +133,9 @@ export function Details({
           })
           .catch(() => {});
       }
-      const draft = localStorage.getItem(`bountini.submission.${id}`);
+      const draft = localStorage.getItem(
+        `bountini.submission.v2:${id}:${me?.user.id || "guest"}`,
+      );
       if (draft) setText(draft);
     } catch {}
     return () => {
@@ -174,7 +179,10 @@ export function Details({
     return () => clearInterval(timer);
   }, []);
   useEffect(() => {
-    localStorage.setItem(`bountini.submission.${id}`, text);
+    localStorage.setItem(
+      `bountini.submission.v2:${id}:${me?.user.id || "guest"}`,
+      text,
+    );
   }, [id, text]);
   useEffect(() => {
     if (operation)
@@ -351,15 +359,21 @@ export function Details({
         </Button>
       </div>
     );
-  const requester = actor === b.requester;
-  const worker = actor === b.worker;
+  const requester = Boolean(me?.wallets.some((w) => w.wallet === b.requester));
+  const worker = Boolean(me?.wallets.some((w) => w.wallet === b.worker));
   const unresolved =
     operation &&
     !["confirmed", "rejected", "failed"].includes(operation.status);
   const disabled = pending || Boolean(unresolved);
   const now = Math.floor((clock + clockOffset) / 1000);
   const allowed = (action: Parameters<typeof canAct>[1]) =>
-    Boolean(actor && canAct(b, action, actor, now));
+    Boolean(
+      me &&
+      !(action === "claim" && requester) &&
+      actor &&
+      me.wallets.some((w) => w.wallet === actor) &&
+      canAct(b, action, actor, now),
+    );
   const submissionVersion = activity
     .filter((event) => event.action === "submit")
     .map((event) => event.signature)
@@ -384,8 +398,36 @@ export function Details({
             </p>
             <h1>{b.title}</h1>
             <Badge status={b.status} />
+            {b.requesterProfileId && (
+              <p className="helper">
+                Requester:{" "}
+                <Link href={`/people/${b.requesterProfileId}`}>
+                  {b.requesterName}
+                </Link>
+              </p>
+            )}
+            {b.workerProfileId && (
+              <p className="helper">
+                Worker:{" "}
+                <Link href={`/people/${b.workerProfileId}`}>
+                  {b.workerName}
+                </Link>
+              </p>
+            )}
           </div>
         </div>
+        {!me && (
+          <Banner>
+            <Link href="/account">Sign in or create an account</Link> to post,
+            claim or communicate.
+          </Banner>
+        )}
+        {me && (!actor || !me.wallets.some((w) => w.wallet === actor)) && (
+          <Banner>
+            Connect a linked wallet and sign a message in the header to use
+            escrow actions. Your account can still view its workroom.
+          </Banner>
+        )}
         {error && <Banner error>{error}</Banner>}
         {!configured && (
           <Banner>
@@ -633,12 +675,18 @@ export function Details({
             </p>
             {!actor && (
               <p className="helper">
-                Connect and sign in with your wallet to take action.
+                Connect a linked wallet and verify it in the header to take
+                action.
               </p>
             )}
             {b.status === "draft" && requester && (
               <Button
-                disabled={disabled || !configured}
+                disabled={
+                  disabled ||
+                  !configured ||
+                  actor !== b.requester ||
+                  !me?.wallets.some((w) => w.wallet === actor)
+                }
                 onClick={() => setConfirmation("fund")}
               >
                 Fund escrow
@@ -685,6 +733,14 @@ export function Details({
             </p>
           </aside>
         </div>
+      </div>
+      <div className="page">
+        <Workroom
+          key={`${id}:${me?.user.id || "guest"}`}
+          id={id}
+          requester={b.requester}
+          worker={b.worker}
+        />
       </div>
       <Dialog
         open={Boolean(confirmation)}

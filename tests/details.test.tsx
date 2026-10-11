@@ -9,6 +9,12 @@ vi.mock("@solana/react-hooks", () => ({
   }),
   useSolanaClient: () => ({}),
 }));
+vi.mock("../src/components/account-provider", () => ({
+  useAccount: () => ({
+    me: { user: { id: "qa" }, wallets: [{ wallet: mocks.actor }] },
+  }),
+}));
+vi.mock("../src/components/workroom", () => ({ Workroom: () => null }));
 vi.mock("../src/components/header", () => ({ api: mocks.api }));
 vi.mock("../src/components/assistance", () => ({
   AdvisoryReview: () => <div>AI advisory</div>,
@@ -91,7 +97,7 @@ async function tick() {
   await act(async () => vi.advanceTimersByTimeAsync(5000));
 }
 it("shows confirmed revision instructions and preserves the worker's local draft during refresh", async () => {
-  localStorage.setItem("bountini.submission.quest", "Work in progress");
+  localStorage.setItem("bountini.submission.v2:quest:qa", "Work in progress");
   await mount();
   bounty = { ...bounty, status: "revision-requested", revisionUsed: true };
   events = [

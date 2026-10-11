@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { walletSession } from "@/server/auth";
+import { participantAccount } from "@/server/accounts";
 import { database, failure, HttpError } from "@/server/db";
 export async function GET(
   _: Request,
@@ -13,11 +13,7 @@ export async function GET(
     const rows =
       await sql`SELECT requester,status FROM bounties WHERE id=${id}`;
     if (!rows[0]) throw new HttpError(404, "Quest not found");
-    if (
-      rows[0].status === "draft" &&
-      rows[0].requester !== (await walletSession())
-    )
-      throw new HttpError(403, "Private draft");
+    if (rows[0].status === "draft") await participantAccount(id);
     const activity =
       await sql`SELECT action,signature,updated_at FROM operations WHERE bounty_id=${id} AND status='confirmed' ORDER BY created_at`;
     return Response.json(

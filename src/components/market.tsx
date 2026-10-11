@@ -1,56 +1,93 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useWalletConnection } from "@solana/react-hooks";
+import { useAccount } from "./account-provider";
 import type { Bounty } from "@/domain/bounty";
 import { api } from "./header";
 import { Badge, Banner, Button, Enter, Icon } from "./ui";
-export function Market({ mine = false }: { mine?: boolean }) {
+export function Market({
+  mine = false,
+  fixedRole,
+}: {
+  mine?: boolean;
+  fixedRole?: "Posted" | "Claimed";
+}) {
   const { wallet } = useWalletConnection();
+  const { me } = useAccount();
   const [bounties, setBounties] = useState<Bounty[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All categories");
-  const [view, setView] = useState("All");
+  const [view, setView] = useState(fixedRole || "All");
   const [state, setState] = useState("All states");
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [morePending, setMorePending] = useState(false);
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const params = new URLSearchParams({
-        mine: String(mine),
-        q: query,
-        category,
-        role: mine ? view : "All",
-        state,
-        page: "0",
-      });
-      const r = await api<{ bounties: Bounty[]; hasMore: boolean }>(
-        `/api/bounties?${params}`,
-      );
-      setBounties(r.bounties);
-      setHasMore(r.hasMore);
-      setPage(0);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to load quests");
-    } finally {
-      setLoading(false);
-    }
-  }, [mine, query, category, view, state]);
+  const loadSequence = useRef(0);
+  const load = useCallback(
+    async (quiet = false) => {
+      const sequence = ++loadSequence.current;
+      if (!quiet) setLoading(true);
+      setError("");
+      try {
+        const params = new URLSearchParams({
+          mine: String(mine),
+          q: query,
+          category,
+          role: mine ? view : "All",
+          state,
+          page: "0",
+        });
+        const r = await api<{ bounties: Bounty[]; hasMore: boolean }>(
+          `/api/bounties?${params}`,
+        );
+        if (sequence !== loadSequence.current) return;
+        setBounties((previous) =>
+          quiet ? [...r.bounties, ...previous.slice(25)] : r.bounties,
+        );
+        setHasMore(r.hasMore);
+        if (!quiet) setPage(0);
+      } catch (e) {
+        if (!quiet && sequence === loadSequence.current)
+          setError(e instanceof Error ? e.message : "Unable to load quests");
+      } finally {
+        if (sequence === loadSequence.current) setLoading(false);
+      }
+    },
+    [mine, query, category, view, state, me?.user.id],
+  );
   useEffect(() => {
     const debounce = setTimeout(() => void load(), 250);
     const refresh = () => void load();
     window.addEventListener("bountini-auth-change", refresh);
     return () => {
+      loadSequence.current++;
       clearTimeout(debounce);
       window.removeEventListener("bountini-auth-change", refresh);
     };
   }, [load, wallet?.account.address]);
+  useEffect(() => {
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      try {
+        if (document.visibilityState === "visible" && navigator.onLine)
+          await load(true);
+      } finally {
+        if (!stopped) timer = setTimeout(poll, 10000);
+      }
+    };
+    timer = setTimeout(poll, 10000);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [load]);
   const visible = bounties;
+  const Heading = mine && fixedRole ? "h2" : "h1";
+  const workerView = fixedRole === "Claimed";
   async function more() {
     setMorePending(true);
     try {
@@ -85,24 +122,35 @@ export function Market({ mine = false }: { mine?: boolean }) {
             <p className="eyebrow">
               {mine ? "Your contributions" : "The community board"}
             </p>
-            <h1>{mine ? "My Bountini" : "Find your next quest."}</h1>
+            <Heading>
+              {mine
+                ? fixedRole === "Posted"
+                  ? "Your posted quests"
+                  : fixedRole === "Claimed"
+                    ? "Your claimed work"
+                    : "My Bountini"
+                : "Find your next quest."}
+            </Heading>
             <p className="muted">
               {mine
                 ? "Track the work you post, claim and complete."
                 : "Small tasks. Clear requirements. A useful place to start."}
             </p>
           </div>
-          <Link href="/create" className="button primary">
-            Create a quest <Icon name="arrow" />
+          <Link
+            href={workerView ? "/discover" : "/create"}
+            className="button primary"
+          >
+            {workerView ? "Find work" : "Create a quest"} <Icon name="arrow" />
           </Link>
         </div>
-        {mine && !wallet ? (
+        {mine && !me ? (
           <div className="empty">
             <Icon name="wallet" />
             <h2>Your work lives here.</h2>
             <p>
-              Connect and sign in with your wallet to see your posted quests and
-              claimed work.
+              Sign in with your email to see your posted quests and claimed
+              work.
             </p>
           </div>
         ) : (
@@ -156,7 +204,7 @@ export function Market({ mine = false }: { mine?: boolean }) {
                   ))}
                 </select>
               </div>
-              {mine && (
+              {mine && !fixedRole && (
                 <div className="field">
                   <label htmlFor="view">Your role</label>
                   <select
@@ -178,7 +226,7 @@ export function Market({ mine = false }: { mine?: boolean }) {
             {error ? (
               <>
                 <Banner error>{error}</Banner>
-                <Button variant="secondary" onClick={load}>
+                <Button variant="secondary" onClick={() => void load()}>
                   Retry loading
                 </Button>
                 {hasMore && !loading && (
@@ -205,6 +253,9 @@ export function Market({ mine = false }: { mine?: boolean }) {
                       </h3>
                       <div className="quest-meta">
                         <Badge status={b.status} />
+                        {b.requesterName && (
+                          <span>Posted by {b.requesterName}</span>
+                        )}
                         <span>{b.category}</span>
                         <span>30-minute delivery</span>
                       </div>
@@ -231,10 +282,15 @@ export function Market({ mine = false }: { mine?: boolean }) {
                 <p>
                   {query || category !== "All categories"
                     ? "Try a different search or category."
-                    : "Create a clear task for your community. Funded quests will appear here after chain confirmation."}
+                    : workerView
+                      ? "Browse available quests. Work you claim will appear here after chain confirmation."
+                      : "Create a clear task for your community. Funded quests will appear here after chain confirmation."}
                 </p>
-                <Link className="button secondary" href="/create">
-                  Create a quest
+                <Link
+                  className="button secondary"
+                  href={workerView ? "/discover" : "/create"}
+                >
+                  {workerView ? "Find work" : "Create a quest"}
                 </Link>
               </div>
             )}

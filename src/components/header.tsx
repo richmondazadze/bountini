@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useWalletConnection } from "@solana/react-hooks";
 import { Button, Dialog, Banner, Icon } from "./ui";
+import { AccountNav } from "./account-nav";
+import { useAccount } from "./account-provider";
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(path, {
     ...init,
@@ -15,6 +17,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 export function Header() {
   const path = usePathname();
+  const { me } = useAccount();
   const { connectors, connect, disconnect, wallet, status } =
     useWalletConnection();
   const [open, setOpen] = useState(false);
@@ -52,7 +55,7 @@ export function Header() {
     return () => {
       cancelled = true;
     };
-  }, [identity, address]);
+  }, [identity, address, me?.user.id]);
   async function signIn() {
     if (!wallet?.signMessage) {
       setError(
@@ -126,6 +129,7 @@ export function Header() {
             ))}
           </nav>
           <div className="wallet-nav">
+            <AccountNav />
             <span className="network">
               <span aria-hidden="true">●</span> Devnet
             </span>
@@ -151,23 +155,29 @@ export function Header() {
         {error && <Banner error>{error}</Banner>}
         {address ? (
           <>
+            {!me && (
+              <p>
+                <Link href="/account">Sign in or create your account</Link>{" "}
+                before linking a wallet.
+              </p>
+            )}
             <p className="helper">Connected wallet: {wallet?.connector.name}</p>
             <p className="address">{address}</p>
             <p>
               {signedIn
-                ? "Signed in to Bountini"
-                : "Sign a message to save quests and submissions."}
+                ? "Wallet linked and verified for escrow"
+                : "Link this wallet to your email account with a signature."}
             </p>
             <Button
               pending={pending}
-              disabled={signedIn || !authReady}
+              disabled={signedIn || !authReady || !me}
               onClick={signIn}
             >
               {pending
                 ? "Waiting for wallet…"
                 : signedIn
                   ? "Signed in"
-                  : "Sign in with wallet"}
+                  : "Link wallet"}
             </Button>
             <Button
               variant="quiet"

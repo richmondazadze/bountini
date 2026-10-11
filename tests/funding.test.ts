@@ -61,3 +61,38 @@ it("explains insufficient Devnet funds before creating an operation or opening a
   expect(m.sql).toHaveBeenCalledTimes(2);
   expect(m.instruction).not.toHaveBeenCalled();
 });
+it("prevents one account from claiming its own quest through another linked wallet", async () => {
+  vi.stubEnv(
+    "NEXT_PUBLIC_ESCROW_PROGRAM_ID",
+    "11111111111111111111111111111111",
+  );
+  vi.stubEnv("APP_ORIGIN", "http://localhost:3000");
+  m.sql
+    .mockReset()
+    .mockResolvedValueOnce([
+      {
+        id: "11111111-1111-4111-8111-111111111111",
+        requester: "another-wallet",
+        title: "Example quest",
+        description: "Example quest description",
+        category: "Writing",
+        requirements: ["Write text"],
+        reward_lamports: "100000000",
+        status: "open",
+        requirements_hash: "hash",
+        created_at: new Date().toISOString(),
+      },
+    ])
+    .mockResolvedValueOnce([{ same_account: 1 }]);
+  const response = await POST(
+    new Request("http://localhost:3000", {
+      method: "POST",
+      headers: { Origin: "http://localhost:3000" },
+      body: JSON.stringify({ action: "claim" }),
+    }),
+    { params: Promise.resolve({ id: "11111111-1111-4111-8111-111111111111" }) },
+  );
+  expect(response.status).toBe(403);
+  expect((await response.json()).error).toContain("own quest");
+  expect(m.sql).toHaveBeenCalledTimes(2);
+});

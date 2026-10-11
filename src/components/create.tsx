@@ -1,6 +1,8 @@
 "use client";
+import Link from "next/link";
+import { useAccount } from "./account-provider";
 import { useEffect, useState } from "react";
-import {useWalletConnection} from "@solana/react-hooks";
+import { useWalletConnection } from "@solana/react-hooks";
 import { useRouter } from "next/navigation";
 import {
   draftSchema,
@@ -33,17 +35,33 @@ const example: Draft = {
   reward: "0.1",
 };
 export function Create() {
+  const { me, loading } = useAccount();
+  if (loading)
+    return (
+      <div className="page" role="status">
+        Loading your account…
+      </div>
+    );
+  return <CreateForm key={me?.user.id || "guest"} />;
+}
+function CreateForm() {
   const router = useRouter();
-  const {wallet}=useWalletConnection();
+  const { me } = useAccount();
+  const { wallet } = useWalletConnection();
   const [draft, setDraft] = useState<Draft>(empty);
   const [loaded, setLoaded] = useState(false);
+  const draftKey = `bountini.draft.v2:${me?.user.id || "guest"}`;
   const [review, setReview] = useState(false);
   const [agree, setAgree] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
+    setLoaded(false);
+    setDraft(empty);
+    setReview(false);
+    setAgree(false);
     try {
-      const stored = localStorage.getItem("bountini.draft.v1");
+      const stored = localStorage.getItem(draftKey);
       if (stored) {
         const p = JSON.parse(stored);
         if (
@@ -61,11 +79,10 @@ export function Create() {
       }
     } catch {}
     setLoaded(true);
-  }, []);
+  }, [draftKey]);
   useEffect(() => {
-    if (loaded)
-      localStorage.setItem("bountini.draft.v1", JSON.stringify(draft));
-  }, [draft, loaded]);
+    if (loaded) localStorage.setItem(draftKey, JSON.stringify(draft));
+  }, [draft, loaded, draftKey]);
   function update<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((d) => ({ ...d, [key]: value }));
     setError("");
@@ -90,13 +107,16 @@ export function Create() {
     setPending(true);
     setError("");
     try {
-      const session=await api<{wallet:string}>("/api/auth/session");
-      if(session.wallet!==wallet?.account.address)throw new Error("Sign in with your connected wallet before saving.");
+      const session = await api<{ wallet: string }>("/api/auth/session");
+      if (session.wallet !== wallet?.account.address)
+        throw new Error(
+          "Sign in with your email, then link your connected wallet in the header before saving.",
+        );
       const { bounty } = await api<{ bounty: Bounty }>("/api/bounties", {
         method: "POST",
         body: JSON.stringify(draft),
       });
-      localStorage.removeItem("bountini.draft.v1");
+      localStorage.removeItem(draftKey);
       router.push(`/bounties/${bounty.id}`);
     } catch (e) {
       setError(
@@ -126,6 +146,12 @@ export function Create() {
         </div>
         <div className="split">
           <div className="form">
+            {!me && (
+              <Banner>
+                <Link href="/account">Sign in or create your account</Link>{" "}
+                before saving a quest. You can prepare your draft here.
+              </Banner>
+            )}
             {error && <Banner error>{error}</Banner>}
             {review ? (
               <>

@@ -1,4 +1,2 @@
-import { Market } from "@/components/market";
-export default function Page() {
-  return <Market mine />;
-}
+import {Dashboard} from "@/components/dashboard";
+export default function Page(){return <Dashboard/>;}

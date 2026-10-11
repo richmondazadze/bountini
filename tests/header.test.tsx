@@ -18,6 +18,12 @@ vi.mock("@solana/react-hooks", () => ({
     connect: vi.fn(),
   }),
 }));
+vi.mock("../src/components/account-provider", () => ({
+  useAccount: () => ({
+    me: { user: { id: "test-user", name: "Test" } },
+    loading: false,
+  }),
+}));
 vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
 vi.mock("../src/components/ui", () => ({
   Button: ({
@@ -85,8 +91,10 @@ it("ignores an old session response and clears the session when the connected ac
   await act(async () => finish(Response.json({ wallet: "AAAA1111" })));
   await open();
   expect(host.textContent).toContain("BBBB2222");
-  expect(host.textContent).toContain("Sign in with wallet");
-  expect(host.textContent).not.toContain("Signed in to Bountini");
+  expect(host.textContent).toContain("Link wallet");
+  expect(host.textContent).not.toContain(
+    "Wallet linked and verified for escrow",
+  );
   expect(
     fetcher.mock.calls.filter(([, init]) => init?.method === "DELETE"),
   ).toHaveLength(1);
@@ -120,7 +128,7 @@ it("clears an old sign-in that finishes after switching accounts", async () => {
   await open();
   await act(async () =>
     Array.from(host.querySelectorAll("button"))
-      .find((b) => b.textContent === "Sign in with wallet")!
+      .find((b) => b.textContent === "Link wallet")!
       .click(),
   );
   m.wallet = wallet("BBBB2222");
@@ -128,5 +136,7 @@ it("clears an old sign-in that finishes after switching accounts", async () => {
   await act(async () => signed(new Uint8Array(64)));
   expect(authenticated).toBe("none");
   expect(host.textContent).toContain("BBBB2222");
-  expect(host.textContent).not.toContain("Signed in to Bountini");
+  expect(host.textContent).not.toContain(
+    "Wallet linked and verified for escrow",
+  );
 });

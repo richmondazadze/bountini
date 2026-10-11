@@ -41,6 +41,10 @@ export type Draft = z.infer<typeof draftSchema>;
 export interface Bounty extends Draft {
   id: string;
   requester: string;
+  requesterName?: string;
+  workerName?: string;
+  requesterProfileId?: string;
+  workerProfileId?: string;
   worker: string | null;
   status: BountyStatus;
   requirementsHash: string;

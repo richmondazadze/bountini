@@ -8,6 +8,12 @@ export function bountyFromRow(r: Record<string, unknown>): Bounty {
     requirements: r.requirements as string[],
     reward: formatSOL(BigInt(String(r.reward_lamports))),
     requester: String(r.requester),
+    requesterName: r.requester_name ? String(r.requester_name) : undefined,
+    workerName: r.worker_name ? String(r.worker_name) : undefined,
+    requesterProfileId: r.requester_user_id
+      ? String(r.requester_user_id)
+      : undefined,
+    workerProfileId: r.worker_user_id ? String(r.worker_user_id) : undefined,
     worker: r.worker ? String(r.worker) : null,
     status: r.status as Bounty["status"],
     requirementsHash: String(r.requirements_hash),

@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ session: vi.fn(), sql: vi.fn() }));
-vi.mock("@/server/auth", () => ({ walletSession: mocks.session }));
+vi.mock("@/server/accounts", () => ({ participantAccount: mocks.session }));
 vi.mock("@/server/db", async (original) => ({
   ...(await original<typeof import("@/server/db")>()),
   database: () => mocks.sql,
@@ -16,17 +16,17 @@ beforeEach(() => {
 it.each(["worker", "requester"])(
   "allows %s and restricts the query to confirmed matching review operations",
   async (actor) => {
-    mocks.session.mockResolvedValue(actor);
-    mocks.sql
-      .mockResolvedValueOnce([{ requester: "requester", worker: "worker" }])
-      .mockResolvedValueOnce([{ feedback: "Fix the link" }]);
+    mocks.session.mockResolvedValue({
+      bounty: { requester: "requester", worker: "worker" },
+    });
+    mocks.sql.mockResolvedValueOnce([{ feedback: "Fix the link" }]);
     const response = await GET(new Request("http://localhost"), ctx);
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(await response.json()).toEqual({
       feedback: [{ feedback: "Fix the link" }],
     });
-    const query = mocks.sql.mock.calls[1][0].join("?");
+    const query = mocks.sql.mock.calls[0][0].join("?");
     expect(query).toContain("o.status='confirmed'");
     expect(query).toContain("o.bounty_id=r.bounty_id");
     expect(query).toContain("o.actor=r.requester");
@@ -34,8 +34,10 @@ it.each(["worker", "requester"])(
   },
 );
 it("denies outsiders before reading reviews", async () => {
-  mocks.session.mockResolvedValue("outsider");
+  mocks.session.mockRejectedValue(
+    new (await import("@/server/db")).HttpError(403, "Only participants"),
+  );
   mocks.sql.mockResolvedValue([{ requester: "requester", worker: "worker" }]);
   expect((await GET(new Request("http://localhost"), ctx)).status).toBe(403);
-  expect(mocks.sql).toHaveBeenCalledTimes(1);
+  expect(mocks.sql).not.toHaveBeenCalled();
 });
