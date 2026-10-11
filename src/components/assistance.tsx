@@ -128,11 +128,11 @@ export function DraftAssistant({
     <section className="panel" style={{ marginBottom: 24 }}>
       <h3>Build a clearer brief</h3>
       <p className="helper">
-        Optional assistance. Sign in with your verified email account, then
-        connect and verify your wallet. Voice sends audio to ElevenLabs;
-        generating a proposal sends this text to Gemini. The transcript stays in
-        this screen until you apply or clear it. Provider retention depends on
-        your account settings.
+        Optional assistance. Sign in with your email account, then connect and
+        verify your wallet. Voice sends audio to ElevenLabs; generating a
+        proposal sends this text to Gemini. The transcript stays in this screen
+        until you apply or clear it. Provider retention depends on your account
+        settings.
       </p>
       {error && <Banner error>{error}</Banner>}
       <div className="field">

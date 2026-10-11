@@ -18,6 +18,11 @@ function authHandlers() {
 }
 export async function GET(request: Request) {
   try {
+    if (/\/verify-email$/.test(new URL(request.url).pathname))
+      return Response.json(
+        { error: "Email confirmation is not required" },
+        { status: 404 },
+      );
     return await authHandlers().GET(request);
   } catch (e) {
     return failure(e);
@@ -26,12 +31,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const path = new URL(request.url).pathname;
-    if (
-      !emailReady() &&
-      /\/(sign-up\/email|request-password-reset|send-verification-email)$/.test(
-        path,
-      )
-    )
+    if (/\/(send-verification-email|verify-email)$/.test(path))
+      return Response.json(
+        { error: "Email confirmation is not required" },
+        { status: 404 },
+      );
+    if (!emailReady() && /\/request-password-reset$/.test(path))
       throw new HttpError(
         503,
         "Email delivery is being configured. Please try again shortly.",

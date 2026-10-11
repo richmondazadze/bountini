@@ -5,8 +5,8 @@ export async function accountSession(fresh = false) {
   const session = await accountAuth().api.getSession({
     headers: await headers(),
   });
-  if (!session?.user.emailVerified)
-    throw new HttpError(401, "Sign in with your verified email account");
+  if (!session?.user)
+    throw new HttpError(401, "Sign in with your email account");
   if (
     fresh &&
     Date.now() - new Date(session.session.createdAt).getTime() > 3600000

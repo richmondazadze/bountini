@@ -9,12 +9,6 @@ const options = accountOptions();
 options.baseURL = "http://localhost:3001";
 options.trustedOrigins = ["http://localhost:3001"];
 options.advanced = { ...options.advanced, useSecureCookies: false };
-options.emailVerification = {
-  ...options.emailVerification,
-  sendVerificationEmail: async ({ url }) => {
-    captured.push({ url, kind: "verify" });
-  },
-};
 options.emailAndPassword = {
   ...options.emailAndPassword!,
   sendResetPassword: async ({ url }) => {
@@ -67,30 +61,10 @@ try {
   assert.equal(signup.status, 200);
   userId = (await signup.json()).user.id;
   assert(userId);
-  assert.equal(captured.length, 1);
-  const denied = await req("sign-in/email", { email, password });
-  assert.equal(denied.status, 403);
-  const verified = await auth.handler(
-    new Request(captured.find((x) => x.kind === "verify")!.url, {
-      headers: { origin: "http://localhost:3001" },
-    }),
-  );
-  assert(verified.status < 400);
-  assert.equal(
-    new URL(
-      verified.headers.get("location")!,
-      "http://localhost:3001",
-    ).searchParams.get("next"),
-    "/create",
-  );
-  assert.equal(
-    new URL(
-      verified.headers.get("location")!,
-      "http://localhost:3001",
-    ).searchParams.get("role"),
-    "requester",
-  );
-  const firstCookie = cookie(verified);
+  assert.equal(captured.length, 0);
+  const firstCookie = cookie(signup);
+  const login = await req("sign-in/email", { email, password });
+  assert.equal(login.status, 200);
   assert(firstCookie);
   const session = await req("get-session", undefined, firstCookie);
   assert.equal((await session.json()).user.id, userId);
@@ -133,7 +107,7 @@ try {
   assert.notEqual(stored.rows[0].password, newPassword);
   assert(stored.rows[0].password.length > 80);
   console.log(
-    "PASS: password policy, verification, login, origin protection, hashing, single-use recovery and session revocation",
+    "PASS: password policy, immediate signup/login without confirmation, origin protection, hashing, single-use recovery and session revocation",
   );
 } finally {
   if (userId)

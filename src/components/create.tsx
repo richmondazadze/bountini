@@ -48,9 +48,7 @@ export function Create() {
     return (
       <div className="page account-page">
         <h1>Sign in to post a quest.</h1>
-        <p>
-          Create and verify your account before preparing your private brief.
-        </p>
+        <p>Create your account before preparing your private brief.</p>
         <Link
           className="button primary"
           href={accountHref("/create", "requester")}

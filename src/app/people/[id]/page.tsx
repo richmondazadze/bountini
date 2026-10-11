@@ -10,7 +10,7 @@ export default async function Page({
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
   const [p] =
-    await database()`SELECT u.name,p.bio,p.skills,p.portfolio_url FROM auth_users u LEFT JOIN profiles p ON p.user_id=u.id WHERE u.id=${id} AND u."emailVerified"=true`;
+    await database()`SELECT u.name,p.bio,p.skills,p.portfolio_url FROM auth_users u LEFT JOIN profiles p ON p.user_id=u.id WHERE u.id=${id}`;
   if (!p) notFound();
   const portfolio =
     p.portfolio_url &&

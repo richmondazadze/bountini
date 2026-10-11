@@ -12,13 +12,6 @@ options.advanced = {
   ...options.advanced,
   useSecureCookies: origin.startsWith("https:"),
 };
-const captured: string[] = [];
-options.emailVerification = {
-  ...options.emailVerification,
-  sendVerificationEmail: async ({ url }) => {
-    captured.push(url);
-  },
-};
 const auth = betterAuth(options);
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
 const run = randomUUID();
@@ -68,11 +61,7 @@ try {
     );
     assert.equal(signup.status, 200);
     const id = (await signup.json()).user.id;
-    const verification = await auth.handler(
-      new Request(captured.at(-1)!, { headers: { origin } }),
-    );
-    assert(verification.status < 400);
-    const cookie = verification.headers
+    const cookie = signup.headers
       .getSetCookie()
       .map((s) => s.split(";")[0])
       .join("; ");

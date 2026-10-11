@@ -80,7 +80,7 @@ it("does not render guest private quest fields or assistance", async () => {
     accountHref("/create", "requester"),
   );
 });
-it("preserves executor destination and intent in signup verification callback", async () => {
+it("preserves executor destination and intent in signup callback", async () => {
   const destination = "/bounties/4309d098-a658-4b60-baa8-a508204e5101";
   await act(async () =>
     root.render(

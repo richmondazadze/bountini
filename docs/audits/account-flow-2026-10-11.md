@@ -63,3 +63,7 @@ All seven findings are addressed: guest wallet controls/modal are hidden and gat
 Validation: 66 automated tests, TypeScript and production build passed. The real Better Auth/Neon integration verified that the email-verification redirect preserves /create and requester intent, alongside existing verification, recovery and session-revocation checks. Hosted requester sign-in returned to /create and persisted requester preference. Configured voice/AI and saving stayed disabled without a proven wallet, even after agreement acceptance. Production deployment: dpl_5U48CvEjFvzBy98PmHVBXxLfxaLr.
 
 Hosted worker continuation passed: signing in from the selected quest returned to that exact quest and persisted Worker preference. Signing out restored the guest account gate and hid wallet controls. Controlled QA account removed. Wallet-access race tests deny stale verification after an account switch and clear access on sign-out.
+
+## Subsequent user policy change
+
+Email confirmation is no longer required, at the user's explicit request. Replace the verification steps in the journeys above with immediate authenticated signup. Account-first gating, wallet ownership signatures and participant-only access remain. Historical verification checks above describe the earlier release.

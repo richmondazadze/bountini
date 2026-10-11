@@ -87,10 +87,6 @@ export function AccountForm({
       setPassword("");
       if (resetToken) {
         setNotice("Password updated. Sign in with your new password.");
-      } else if (mode === "signup") {
-        setNotice(
-          "Check your inbox to verify your email. The link expires in one hour.",
-        );
       } else if (mode === "forgot") {
         setNotice(
           "If that address has an account, a password reset link is on its way.",
@@ -245,31 +241,6 @@ export function AccountForm({
             {mode === "forgot" ? "Back to sign in" : "Forgot password?"}
           </Button>
         </div>
-      )}
-      {!resetToken && (
-        <Button
-          variant="quiet"
-          disabled={!email || pending}
-          onClick={async () => {
-            setPending(true);
-            try {
-              const r = await authClient.sendVerificationEmail({
-                email,
-                callbackURL,
-              });
-              if (r.error) throw new Error(r.error.message);
-              setNotice(
-                "If your email needs verification, a new link is on its way.",
-              );
-            } catch (e) {
-              setError(e instanceof Error ? e.message : "Please try again");
-            } finally {
-              setPending(false);
-            }
-          }}
-        >
-          Resend verification email
-        </Button>
       )}
       <p className="helper">
         Devnet beta · Rewards are test SOL with no cash value. Your email stays

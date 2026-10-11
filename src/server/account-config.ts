@@ -33,21 +33,14 @@ export function accountOptions(): BetterAuthOptions {
     verification: { modelName: "auth_verifications" },
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: true,
+      requireEmailVerification: false,
+      autoSignIn: true,
       minPasswordLength: 12,
       maxPasswordLength: 128,
       resetPasswordTokenExpiresIn: 900,
       revokeSessionsOnPasswordReset: true,
       sendResetPassword: async ({ user, url }) =>
         sendAccountEmail(user.email, url, "reset"),
-    },
-    emailVerification: {
-      sendOnSignUp: true,
-      sendOnSignIn: true,
-      autoSignInAfterVerification: true,
-      expiresIn: 3600,
-      sendVerificationEmail: async ({ user, url }) =>
-        sendAccountEmail(user.email, url, "verify"),
     },
     advanced: {
       database: { generateId: "uuid" },
@@ -67,7 +60,6 @@ export function accountOptions(): BetterAuthOptions {
         "/sign-in/email": { window: 60, max: 5 },
         "/sign-up/email": { window: 60, max: 3 },
         "/request-password-reset": { window: 60, max: 3 },
-        "/send-verification-email": { window: 60, max: 3 },
       },
     },
   };

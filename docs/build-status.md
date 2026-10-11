@@ -85,3 +85,11 @@ Resolved the requester/worker flow audit: verified email account required before
 66 tests, TypeScript and production build passed. Real Better Auth/Neon verification preserved requester intent and /create through the verification redirect; recovery and session-revocation checks passed. Hosted browser requester login returned to /create with requester preference saved, and saving stayed disabled without wallet proof after accepting agreement. No escrow transaction was performed. Production deployment: dpl_5U48CvEjFvzBy98PmHVBXxLfxaLr. Detailed findings and fixes: docs/audits/account-flow-2026-10-11.md.
 
 Hosted worker continuation passed: signing in from the selected quest returned to that exact quest and persisted Worker preference. Signing out restored the guest account gate and hid wallet controls. Controlled QA account removed. Wallet-access race tests deny stale verification after an account switch and clear access on sign-out.
+
+## Immediate account signup — 2026-10-11
+
+At the user's request, mandatory email confirmation is removed. Signup creates an authenticated account immediately; existing accounts with emailVerified=false may sign in. Account access checks require a valid session rather than emailVerified, and public profiles no longer filter on that flag. Email verification sending and endpoints are disabled, and the resend control/inbox notice are removed. Account-first creation and wallet gates remain, with signature proof still required for wallets. Email password recovery, password policy, secure cookies, origin checks and rate limits remain active. No existing email is marked verified artificially.
+
+67 tests, TypeScript and local production build passed. Real database-backed authentication checks passed immediate signup/login without confirmation, hashing, origin protection, single-use password recovery and session revocation. The unrelated motion project is excluded from the web TypeScript build and Vercel upload; its files are preserved.
+
+Immediate-signup production deployment: dpl_38tK93wjP87JU9HZe393gjYx5FKW. Hosted registration returned a session and /api/me granted access while emailVerified remained false; subsequent password sign-in succeeded. Verification sending returned 404. Controlled test account removed. Hosted signup UI has no confirmation/resend flow.

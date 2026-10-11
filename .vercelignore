@@ -13,3 +13,4 @@ Cargo.lock
 Cargo.toml
 Anchor.toml
 .env.local
+motion

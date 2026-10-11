@@ -17,13 +17,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   m.headers.mockResolvedValue(new Headers());
 });
-it.each([null, { user: { emailVerified: false } }])(
-  "requires a verified account session",
-  async (session) => {
-    m.session.mockResolvedValue(session);
-    await expect(accountSession()).rejects.toMatchObject({ status: 401 });
-  },
-);
+it.each([null, {}])("requires an account session", async (session) => {
+  m.session.mockResolvedValue(session);
+  await expect(accountSession()).rejects.toMatchObject({ status: 401 });
+});
 it("requires a recent session when linking a wallet", async () => {
   m.session.mockResolvedValue({
     user: { id: "user", emailVerified: true },
@@ -49,4 +46,11 @@ it("denies an account with no matching participant wallet", async () => {
   await expect(participantAccount("quest")).rejects.toMatchObject({
     status: 403,
   });
+});
+
+it("accepts an authenticated account without email confirmation", async () => {
+  m.session.mockResolvedValue({
+    user: { id: "new-user", emailVerified: false },
+  });
+  expect((await accountSession()).user.id).toBe("new-user");
 });
