@@ -5,15 +5,26 @@ import {
   type WalletConnector,
   type WalletSession,
 } from "@solana/client";
-import { signMetaMaskDevnet } from "./metamask";
+import {
+  signMetaMaskDevnet,
+  getMetaMaskProvider,
+  type MetaMaskProvider,
+} from "./metamask";
 
 export const WALLET_CHAIN = "solana:devnet";
 
 export function createBountiniClient(connectors?: readonly WalletConnector[]) {
   let client: SolanaClient;
+  let metamaskProvider: MetaMaskProvider | undefined;
   const wallets =
     connectors ??
-    autoDiscover({ overrides: () => ({ defaultChain: WALLET_CHAIN }) });
+    autoDiscover({
+      overrides: (wallet) => {
+        if (wallet.name.toLowerCase().includes("metamask"))
+          metamaskProvider = getMetaMaskProvider(wallet);
+        return { defaultChain: WALLET_CHAIN };
+      },
+    });
   client = createClient({
     cluster: "devnet",
     endpoint:
@@ -66,6 +77,7 @@ export function createBountiniClient(connectors?: readonly WalletConnector[]) {
                   return signMetaMaskDevnet(
                     transaction,
                     current.session.account.address,
+                    metamaskProvider,
                   );
                 },
               }

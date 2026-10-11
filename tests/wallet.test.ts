@@ -172,7 +172,7 @@ it("routes MetaMask sign-only requests through the explicit Devnet API using the
     NonNullable<typeof current.session.signTransaction>
   >[0];
   await current.session.signTransaction!(tx);
-  expect(metamaskSigner).toHaveBeenCalledWith(tx, f.second.address);
+  expect(metamaskSigner).toHaveBeenCalledWith(tx, f.second.address, undefined);
   expect(f.signTransaction).not.toHaveBeenCalled();
   expect(current.session.sendTransaction).toBeUndefined();
   f.client.destroy();

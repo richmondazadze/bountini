@@ -94,3 +94,45 @@ it("never requests a signature for a different Devnet account", async () => {
   );
   expect(mocks.invokeMethod).not.toHaveBeenCalled();
 });
+it("reuses the injected transport and requests only the existing account on Devnet", async () => {
+  const caipAccount = `${METAMASK_DEVNET_SCOPE}:${account}`;
+  const provider = {
+    getSession: vi
+      .fn()
+      .mockResolvedValueOnce({ sessionScopes: {} })
+      .mockResolvedValue({
+        sessionScopes: { [METAMASK_DEVNET_SCOPE]: { accounts: [caipAccount] } },
+      }),
+    createSession: vi.fn().mockResolvedValue(undefined),
+    invokeMethod: vi
+      .fn()
+      .mockResolvedValue({
+        signedTransaction: getBase64EncodedWireTransaction(tx),
+      }),
+  };
+  await signMetaMaskDevnet(tx, account, provider);
+  expect(mocks.create).not.toHaveBeenCalled();
+  expect(provider.createSession).toHaveBeenCalledWith({
+    optionalScopes: {
+      [METAMASK_DEVNET_SCOPE]: {
+        accounts: [caipAccount],
+        methods: [],
+        notifications: [],
+      },
+    },
+  });
+  expect(provider.invokeMethod.mock.calls[0][0].scope).toBe(
+    METAMASK_DEVNET_SCOPE,
+  );
+});
+it("refuses the injected transport when Devnet permission was not granted", async () => {
+  const provider = {
+    getSession: vi.fn().mockResolvedValue({ sessionScopes: {} }),
+    createSession: vi.fn().mockResolvedValue(undefined),
+    invokeMethod: vi.fn(),
+  };
+  await expect(signMetaMaskDevnet(tx, account, provider)).rejects.toThrow(
+    "Connect this MetaMask account",
+  );
+  expect(provider.invokeMethod).not.toHaveBeenCalled();
+});
