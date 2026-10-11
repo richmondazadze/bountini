@@ -17,6 +17,11 @@ import {
   AccountRole,
   type Instruction,
 } from "@solana/kit";
+import { neon } from "@neondatabase/serverless";
+const demoDatabase =
+  process.env.DEMO_WORKER_ONLY === "true"
+    ? neon(process.env.DATABASE_URL!)
+    : null;
 const origin = process.env.DEMO_ORIGIN || "http://localhost:3000";
 const rpc = createSolanaRpc("https://api.devnet.solana.com");
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -146,7 +151,13 @@ async function act(id: string, w: Wallet, action: string, content?: string) {
     .send();
   for (let i = 0; i < 50; i++) {
     await pause(2000);
-    const { json } = await api(`/api/operations/${p.operationId}`, w);
+    const json = demoDatabase
+      ? {
+          operation: (
+            await demoDatabase`SELECT status FROM operations WHERE id=${p.operationId}`
+          )[0],
+        }
+      : (await api(`/api/operations/${p.operationId}`, w)).json;
     assert.notEqual(json.operation.status, "failed");
     if (json.operation.status === "confirmed") {
       receipts.push({
@@ -226,11 +237,12 @@ assert.equal(
   "refunded",
 );
 writeFileSync(
-  "output/devnet-demo.json",
+  demoDatabase ? "output/render-worker-demo.json" : "output/devnet-demo.json",
   JSON.stringify(
     {
       network: "devnet",
       appOrigin: origin,
+      backgroundWorkerOnly: !!demoDatabase,
       verifiedPayoutLamports: "1000000",
       verifiedRefundNetLamports: "995000",
       requester: requester.signer.address,
