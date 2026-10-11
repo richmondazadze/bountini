@@ -7,6 +7,7 @@ import { Conversation } from "@elevenlabs/client";
 import { draftSchema, type Draft } from "@/domain/bounty";
 import { api } from "./header";
 import { Banner, Button, Icon } from "./ui";
+import { VoiceStage, transcriptMessages } from "./voice-stage";
 type Proposal = Omit<Draft, "reward"> & { reward?: string };
 const proposalSchema = draftSchema.omit({ reward: true });
 type VoiceSession = {
@@ -40,6 +41,14 @@ export function DraftAssistant({
   const [phase, setPhase] = useState("idle");
   const [status, setStatus] = useState("disconnected");
   const [muted, setMuted] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [editing, setEditing] = useState(true);
+  const chat = useRef<HTMLDivElement>(null);
+  const followChat = useRef(true);
+  useEffect(() => {
+    if (chat.current && followChat.current)
+      chat.current.scrollTop = chat.current.scrollHeight;
+  }, [text, editing]);
   const [enabled, setEnabled] = useState({
     aiEnabled: false,
     voiceEnabled: false,
@@ -62,6 +71,7 @@ export function DraftAssistant({
   }
   function invalidate() {
     generation.current++;
+    setSpeaking(false);
     request.current?.abort();
     request.current = null;
     const old = session.current;
@@ -231,6 +241,9 @@ export function DraftAssistant({
     setError("");
     voiceReward.current = "";
     setStatus("connecting");
+    setEditing(false);
+    followChat.current = true;
+    setMuted(false);
     setPhase("listening");
     const token = generation.current;
     const owner = current.current.identity;
@@ -256,7 +269,9 @@ export function DraftAssistant({
           voice.active = active;
         },
         onModeChange: ({ mode }) => {
+          if (!valid(token, owner)) return;
           voice.speaking = mode === "speaking";
+          setSpeaking(voice.speaking);
           if (!voice.speaking) voice.finishAudio?.();
         },
         clientTools: {
@@ -315,6 +330,7 @@ export function DraftAssistant({
           voice.finishAudio?.();
           if (!valid(token, owner)) return;
           setStatus("disconnected");
+          setSpeaking(false);
           if (!voice.completed) {
             generation.current++;
             session.current = null;
@@ -361,56 +377,146 @@ export function DraftAssistant({
         account settings.
       </p>
       {error && <Banner error>{error}</Banner>}
-      <div className="field">
-        <label htmlFor="assistant-input">
-          Describe your task or edit your transcript
-        </label>
-        <textarea
-          id="assistant-input"
-          value={text}
-          maxLength={6000}
-          onChange={(e) => {
-            writeText(e.target.value);
-            voiceReward.current = "";
-            setProposal(null);
-            if (pending) {
-              invalidate();
-              setPending(false);
-              setStatus("disconnected");
-            }
-            setPhase("idle");
-          }}
-        />
-      </div>
-      <div className="actions">
-        {status === "disconnected" ? (
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!walletReady || !enabled.voiceEnabled || pending}
-            onClick={start}
-          >
-            <Icon name="mic" />
-            {enabled.voiceEnabled ? "Start voice" : "Voice unavailable"}
-          </Button>
-        ) : (
-          <>
-            <Button type="button" variant="secondary" onClick={stop}>
-              Stop voice
+      <div className="voice-workspace">
+        <VoiceStage
+          state={
+            phase === "preparing"
+              ? "preparing"
+              : status === "connecting"
+                ? "connecting"
+                : status === "connected"
+                  ? muted
+                    ? "muted"
+                    : speaking
+                      ? "speaking"
+                      : "listening"
+                  : phase === "failure"
+                    ? "failure"
+                    : phase === "ready" || phase === "proposal"
+                      ? "ready"
+                      : "idle"
+          }
+          getAudio={() => session.current?.active ?? null}
+        >
+          {status === "disconnected" ? (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!walletReady || !enabled.voiceEnabled || pending}
+              onClick={start}
+            >
+              <Icon name="mic" />
+              {enabled.voiceEnabled ? "Start voice" : "Voice unavailable"}
             </Button>
+          ) : (
+            <>
+              <Button type="button" variant="secondary" onClick={stop}>
+                Stop voice
+              </Button>
+              <Button
+                type="button"
+                variant="quiet"
+                disabled={!session.current?.active || pending}
+                onClick={() => {
+                  session.current?.active?.setMicMuted(!muted);
+                  setMuted(!muted);
+                }}
+              >
+                {muted ? "Unmute" : "Mute"}
+              </Button>
+            </>
+          )}
+        </VoiceStage>
+        <div className="voice-conversation">
+          <div className="voice-chat-heading">
+            <div>
+              <h4>Conversation</h4>
+              <span className="helper">You + Bountini</span>
+            </div>
             <Button
               type="button"
               variant="quiet"
-              disabled={!session.current?.active || pending}
+              disabled={status !== "disconnected" || pending}
               onClick={() => {
-                session.current?.active?.setMicMuted(!muted);
-                setMuted(!muted);
+                setEditing(!editing);
+                followChat.current = true;
               }}
             >
-              {muted ? "Unmute" : "Mute"}
+              {editing
+                ? "View conversation"
+                : text
+                  ? "Edit transcript"
+                  : "Type your task"}
             </Button>
-          </>
-        )}
+          </div>
+          <div
+            hidden={editing}
+            className="voice-chat"
+            ref={chat}
+            role="log"
+            aria-label="Conversation transcript"
+            aria-live="polite"
+            aria-relevant="additions text"
+            onScroll={() => {
+              const node = chat.current;
+              if (node)
+                followChat.current =
+                  node.scrollHeight - node.scrollTop - node.clientHeight < 48;
+            }}
+          >
+            {text ? (
+              transcriptMessages(text).map((message, index) => (
+                <div key={index} className={`voice-message ${message.role}`}>
+                  <span>{message.role === "user" ? "You" : "Bountini"}</span>
+                  <p>{message.content}</p>
+                </div>
+              ))
+            ) : (
+              <div className="voice-chat-empty">
+                <Icon name="mic" />
+                <strong>Let’s shape your brief</strong>
+                <p>
+                  Start voice and tell Bountini about your task. Your
+                  conversation will appear here.
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="field voice-editor" hidden={!editing}>
+            <label htmlFor="assistant-input">
+              Describe your task or edit your transcript
+            </label>
+            <textarea
+              id="assistant-input"
+              value={text}
+              readOnly={status !== "disconnected" || pending}
+              placeholder="Describe what you need, who it’s for, and what a successful result looks like…"
+              maxLength={6000}
+              onChange={(e) => {
+                writeText(e.target.value);
+                voiceReward.current = "";
+                setProposal(null);
+                if (pending) {
+                  invalidate();
+                  setPending(false);
+                  setStatus("disconnected");
+                }
+                setPhase("idle");
+              }}
+            />
+            <span className="helper">
+              {text.length.toLocaleString()} / 6,000 characters · Edits are used
+              for your next draft.
+            </span>
+          </div>
+          {status !== "disconnected" && (
+            <p className="helper voice-chat-note">
+              Live transcript · Stop voice to edit your conversation.
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="actions">
         <Button
           type="button"
           disabled={
@@ -445,6 +551,8 @@ export function DraftAssistant({
           onClick={() => {
             void stop();
             writeText("");
+            setEditing(true);
+            followChat.current = true;
             voiceReward.current = "";
             setProposal(null);
             setError("");
@@ -465,7 +573,9 @@ export function DraftAssistant({
                 : status === "connected"
                   ? muted
                     ? "Microphone muted"
-                    : "Listening · Confirm completion to prepare your quest"
+                    : speaking
+                      ? "Bountini is speaking · You can interrupt to add a detail"
+                      : "Listening · Confirm completion to prepare your quest"
                   : "You can type at any time."}
         {!enabled.aiEnabled &&
           " AI assistance is not configured. Use the manual form below."}

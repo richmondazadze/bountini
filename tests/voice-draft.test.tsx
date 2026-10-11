@@ -444,3 +444,78 @@ it("leaves the reward empty when the requester chooses to decide later", async (
   expect(form.reward).toBe("");
   expect(applied).toHaveBeenCalledOnce();
 });
+
+it("shows live speaker bubbles and locks transcript editing during voice", async () => {
+  await start();
+  await act(async () =>
+    options.onMessage({
+      role: "agent",
+      message: "Who is the audience?",
+      event_id: 8,
+    }),
+  );
+  expect(host.querySelectorAll(".voice-message")).toHaveLength(2);
+  expect(host.querySelector(".voice-message.agent")?.textContent).toContain(
+    "Who is the audience?",
+  );
+  expect(button("Edit transcript").disabled).toBe(true);
+  expect(host.querySelector(".voice-stage")?.getAttribute("data-state")).toBe(
+    "listening",
+  );
+  await act(async () => options.onModeChange({ mode: "speaking" }));
+  expect(host.querySelector(".voice-stage")?.getAttribute("data-state")).toBe(
+    "speaking",
+  );
+  await act(async () => button("Mute").click());
+  expect(host.querySelector(".voice-stage")?.getAttribute("data-state")).toBe(
+    "muted",
+  );
+  await act(async () => button("Stop voice").click());
+  expect(button("Edit transcript").disabled).toBe(false);
+  await act(async () => button("Edit transcript").click());
+  expect(host.querySelector(".voice-editor")?.hasAttribute("hidden")).toBe(
+    false,
+  );
+  expect(host.querySelector("textarea")?.readOnly).toBe(false);
+  await act(async () => options.onModeChange({ mode: "speaking" }));
+  expect(host.querySelector(".voice-stage")?.getAttribute("data-state")).toBe(
+    "idle",
+  );
+});
+
+it("clears bubbles and returns to typing without generating a draft", async () => {
+  await start();
+  await act(async () => button("Clear transcript").click());
+  expect(host.querySelectorAll(".voice-message")).toHaveLength(0);
+  expect(host.querySelector("textarea")?.value).toBe("");
+  expect(host.querySelector(".voice-editor")?.hasAttribute("hidden")).toBe(
+    false,
+  );
+  expect(requests()).toHaveLength(0);
+});
+
+it("drives the mic from real input/output levels and stops sampling when muted", async () => {
+  active.getInputVolume = vi.fn(() => 0.1);
+  active.getOutputVolume = vi.fn(() => 0.2);
+  await start();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(60);
+  });
+  const visual = host.querySelector(".voice-visual") as HTMLElement;
+  expect(
+    Number(visual.style.getPropertyValue("--voice-level")),
+  ).toBeGreaterThan(0);
+  expect(active.getInputVolume).toHaveBeenCalled();
+  await act(async () => options.onModeChange({ mode: "speaking" }));
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(60);
+  });
+  expect(active.getOutputVolume).toHaveBeenCalled();
+  await act(async () => button("Mute").click());
+  const calls = active.getOutputVolume.mock.calls.length;
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(120);
+  });
+  expect(active.getOutputVolume).toHaveBeenCalledTimes(calls);
+  expect(visual.style.getPropertyValue("--voice-level")).toBe("0");
+});
