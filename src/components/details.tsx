@@ -1,6 +1,7 @@
 "use client";
 import { useWalletAccess } from "./wallet-access";
 import { Workroom } from "./workroom";
+import { QuestDetails } from "./quest-details/quest-details";
 import {
   DeliverableEditor,
   ConfirmedDeliverables,
@@ -46,18 +47,22 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
   const { wallet } = useWalletConnection();
   const walletReady = useWalletAccess();
   const client = useSolanaClient();
-  const { me } = useAccount();
+  const { me, loading: accountLoading } = useAccount();
   const [b, setB] = useState<Bounty | null>(null);
+  const bountyRef = useRef(b);
+  bountyRef.current = b;
   const [serverTime, setServerTime] = useState(Date.now());
   const [clockOffset, setClockOffset] = useState(0);
   const [clock, setClock] = useState(Date.now());
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [statusFresh, setStatusFresh] = useState(false);
   const [text, setText] = useState("");
   const [feedback, setFeedback] = useState("");
   const [frozen, setFrozen] = useState<FrozenSubmission | null>(null);
   const [confirmation, setConfirmation] = useState<ChainAction | null>(null);
   const [pending, setPending] = useState(false);
+  const [claimAcknowledged, setClaimAcknowledged] = useState(false);
   const [operation, setOperation] = useState<{
     id: string;
     status: TransactionStatus;
@@ -83,13 +88,18 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
   useEffect(() => {
     setFrozen(null);
     setConfirmation(null);
+    setClaimAcknowledged(false);
     setPending(false);
   }, [identity]);
   const refreshSequence = useRef(0);
   const load = useCallback(
     async (quiet = false) => {
       const sequence = ++refreshSequence.current;
-      if (!quiet) setError("");
+      if (!quiet) {
+        setStatusFresh(false);
+        setError("");
+        if (!bountyRef.current) setLoading(true);
+      }
       try {
         const r = await api<{ bounty: Bounty; serverTime: number }>(
           `/api/bounties/${id}`,
@@ -97,6 +107,7 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
         );
         if (sequence !== refreshSequence.current) return;
         setB(r.bounty);
+        setStatusFresh(true);
         api<{ activity: typeof activity }>(`/api/bounties/${id}/activity`)
           .then((r) => {
             if (sequence === refreshSequence.current) setActivity(r.activity);
@@ -121,7 +132,7 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
           } catch {}
       } catch (e) {
         if (!quiet && sequence === refreshSequence.current) {
-          setB(null);
+          setB((previous) => (previous?.status === "draft" ? null : previous));
           setError(
             e instanceof Error ? e.message : "Quest could not be loaded",
           );
@@ -244,20 +255,27 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [operation, pending, load]);
+  }, [operation, pending, load, identity]);
   async function checkOperation() {
     if (!operation) return;
+    const checkingIdentity = identity;
+    const valid = () =>
+      alive.current && identityRef.current === checkingIdentity;
     setPending(true);
     try {
       const r = await api<{
         operation: { status: TransactionStatus; signature?: string };
       }>(`/api/operations/${operation.id}`);
+      if (!valid()) return;
       setOperation({ ...operation, ...r.operation, id: operation.id });
       if (r.operation.status === "confirmed") await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to verify transaction");
+      if (valid())
+        setError(
+          e instanceof Error ? e.message : "Unable to verify transaction",
+        );
     } finally {
-      setPending(false);
+      if (valid()) setPending(false);
     }
   }
   async function transact(action: ChainAction) {
@@ -364,11 +382,13 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
       try {
         localStorage.setItem(`bountini.operation.${id}`, JSON.stringify(saved));
       } catch {}
+      if (!validIdentity()) return;
       setOperation(saved);
       const r = await api<{ operation: { status: TransactionStatus } }>(
         `/api/operations/${opId}`,
         { method: "PATCH", body: JSON.stringify({ signature: txSignature }) },
       );
+      if (!validIdentity()) return;
       setOperation({ ...saved, status: r.operation.status });
       if (r.operation.status === "confirmed") await load();
     } catch (e) {
@@ -404,6 +424,14 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
     return (
       <div className="page">
         <Banner error>{error || "Quest not found"}</Banner>
+        {!me && (
+          <Link
+            className="button secondary"
+            href={accountHref(`/bounties/${id}`)}
+          >
+            Sign in to access this quest
+          </Link>
+        )}
         <Button variant="secondary" onClick={() => void load()}>
           Retry
         </Button>
@@ -414,11 +442,12 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
   const unresolved =
     operation &&
     !["confirmed", "rejected", "failed"].includes(operation.status);
-  const disabled = pending || Boolean(unresolved);
+  const disabled = pending || Boolean(unresolved) || !statusFresh;
   const now = Math.floor((clock + clockOffset) / 1000);
   const allowed = (action: Parameters<typeof canAct>[1]) =>
     Boolean(
       me &&
+      statusFresh &&
       walletReady &&
       !(action === "claim" && requester) &&
       actor &&
@@ -434,6 +463,127 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
     .map((event) => event.signature)
     .join(":");
   const configured = Boolean(process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID);
+  const confirmationAllowed =
+    confirmation === "fund"
+      ? requester &&
+        statusFresh &&
+        walletReady &&
+        actor === b.requester &&
+        b.status === "draft"
+      : confirmation
+        ? allowed(confirmation)
+        : false;
+  const confirmationDialog = (
+    <Dialog
+      containFocus
+      open={Boolean(confirmation)}
+      onClose={() => setConfirmation(null)}
+      title={
+        confirmation === "approve"
+          ? "Approve & pay the contributor?"
+          : confirmation === "fund"
+            ? "Fund this quest?"
+            : confirmation === "withdraw"
+              ? "Withdraw from this quest?"
+              : confirmation === "claim"
+                ? "Claim this quest?"
+                : "Confirm quest action"
+      }
+    >
+      <p>
+        {confirmation === "approve"
+          ? `Release ${b.reward} test SOL to the assigned worker. Confirmed payment cannot be undone.`
+          : confirmation === "withdraw"
+            ? `Close the quest and return ${b.reward} test SOL to the requester atomically.`
+            : confirmation === "reject"
+              ? "Record your feedback. Keep the reward locked until the existing review deadline. You may still approve before expiry."
+              : confirmation === "revise"
+                ? "Request the single revision. The worker has 10 minutes, followed by a fresh 10-minute final review."
+                : confirmation === "fund"
+                  ? `Lock ${b.reward} test SOL in escrow with these fixed requirements. Your wallet shows fees and rent separately.`
+                  : confirmation === "claim"
+                    ? "Claim as the only contributor. Your 30-minute delivery window starts on confirmation. Payment requires requester approval; rejected or expired work may remain unpaid."
+                    : confirmation === "submit"
+                      ? "Submit the deliverables you reviewed and start the requester’s 10-minute review window. Nothing is submitted until your Devnet transaction confirms."
+                      : `Return ${b.reward} test SOL to the requester. Settlement happens once.`}
+      </p>
+      {confirmation === "submit" && frozen && (
+        <>
+          <ManifestView manifest={frozen.manifest} />
+          <p className="helper address">
+            Manifest SHA-256: {frozen.contentHash}
+          </p>
+          <p className="helper">
+            This snapshot is frozen. Choose Keep reviewing to edit and prepare a
+            new snapshot. Failed signing preserves your files and draft.
+          </p>
+        </>
+      )}
+      {confirmation === "claim" && (
+        <label className="qd-claim-consent">
+          <input
+            type="checkbox"
+            checked={claimAcknowledged}
+            onChange={(e) => setClaimAcknowledged(e.target.checked)}
+          />{" "}
+          I understand the requirements, deadlines and approval rules.
+        </label>
+      )}
+      <p className="helper">Network: Solana Devnet.</p>
+      <div className="actions">
+        <Button
+          disabled={
+            disabled ||
+            !configured ||
+            !confirmationAllowed ||
+            (confirmation === "claim" && !claimAcknowledged)
+          }
+          onClick={() => confirmation && transact(confirmation)}
+        >
+          Confirm & open wallet
+        </Button>
+        <Button variant="secondary" onClick={() => setConfirmation(null)}>
+          Keep reviewing
+        </Button>
+      </div>
+    </Dialog>
+  );
+  if (!review)
+    return (
+      <QuestDetails
+        b={b}
+        account={Boolean(me)}
+        accountLoading={Boolean(accountLoading)}
+        actor={actor}
+        walletReady={walletReady}
+        requester={requester}
+        worker={worker}
+        allowed={allowed}
+        configured={configured}
+        statusFresh={statusFresh}
+        pending={pending}
+        operation={operation}
+        error={error}
+        serverTime={serverTime}
+        now={now}
+        onAction={(action) => {
+          setClaimAcknowledged(false);
+          setConfirmation(action);
+        }}
+        onCheck={() => void checkOperation()}
+        onRetry={() => void load()}
+        workroom={
+          <Workroom
+            key={`${id}:${me?.user.id || "guest"}`}
+            id={id}
+            requester={b.requester}
+            worker={b.worker}
+          />
+        }
+        confirmation={confirmationDialog}
+      />
+    );
+
   return (
     <Enter>
       <div className="page">
@@ -795,58 +945,7 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
           worker={b.worker}
         />
       </div>
-      <Dialog
-        open={Boolean(confirmation)}
-        onClose={() => setConfirmation(null)}
-        title={
-          confirmation === "approve"
-            ? "Approve & pay the contributor?"
-            : confirmation === "fund"
-              ? "Fund this quest?"
-              : confirmation === "withdraw"
-                ? "Withdraw from this quest?"
-                : "Confirm quest action"
-        }
-      >
-        <p>
-          {confirmation === "approve"
-            ? `Release ${b.reward} test SOL to the assigned worker. Confirmed payment cannot be undone.`
-            : confirmation === "withdraw"
-              ? `Close the quest and return ${b.reward} test SOL to the requester atomically.`
-              : confirmation === "reject"
-                ? "Record your feedback. Keep the reward locked until the existing review deadline. You may still approve before expiry."
-                : confirmation === "revise"
-                  ? "Request the single revision. The worker has 10 minutes, followed by a fresh 10-minute final review."
-                  : confirmation === "fund"
-                    ? `Lock ${b.reward} test SOL in escrow with these fixed requirements. Your wallet shows fees and rent separately.`
-                    : confirmation === "claim"
-                      ? "Claim as the only worker. Your 30-minute delivery window starts on chain confirmation."
-                      : confirmation === "submit"
-                        ? "Commit this frozen deliverable snapshot and start the requester’s 10-minute review window. Nothing is submitted until your Devnet transaction confirms."
-                        : `Return ${b.reward} test SOL to the requester. Settlement happens once.`}
-        </p>
-        {confirmation === "submit" && frozen && (
-          <>
-            <ManifestView manifest={frozen.manifest} />
-            <p className="helper address">
-              Manifest SHA-256: {frozen.contentHash}
-            </p>
-            <p className="helper">
-              This snapshot is frozen. Choose Keep reviewing to edit and prepare
-              a new snapshot. Failed signing preserves your files and draft.
-            </p>
-          </>
-        )}
-        <p className="helper">Network: Solana Devnet.</p>
-        <div className="actions">
-          <Button onClick={() => confirmation && transact(confirmation)}>
-            Confirm & open wallet
-          </Button>
-          <Button variant="secondary" onClick={() => setConfirmation(null)}>
-            Keep reviewing
-          </Button>
-        </div>
-      </Dialog>
+      {confirmationDialog}
     </Enter>
   );
 }

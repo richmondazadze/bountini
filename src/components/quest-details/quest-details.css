@@ -1,0 +1,362 @@
+.qd-page {
+  max-width: 1360px;
+  padding: 28px 40px 64px;
+  margin: auto;
+}
+.qd-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+.qd-back img {
+  transform: rotate(180deg);
+}
+.qd-context {
+  border: 0;
+  background: var(--surface);
+  margin-bottom: 32px;
+}
+.qd-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 13px;
+}
+.qd-context h1 {
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.18;
+  letter-spacing: -0.035em;
+  font-weight: 500;
+  max-width: 36ch;
+  overflow-wrap: anywhere;
+  margin: 20px 0;
+}
+.qd-profile {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: var(--action);
+  font-size: 13px;
+}
+.qd-page .discovery-identity {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.qd-page .discovery-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  background: var(--subtle);
+  color: var(--action);
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+.qd-page .discovery-identity > div {
+  display: grid;
+  gap: 3px;
+  overflow-wrap: anywhere;
+}
+.qd-page .discovery-identity strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+.qd-page .discovery-identity > div > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.qd-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 64px;
+  align-items: start;
+}
+.qd-decision {
+  grid-column: 2;
+  grid-row: 1;
+  padding: 24px;
+  border: 1px solid var(--border);
+  background: var(--subtle);
+  border-radius: 0;
+  min-width: 0;
+}
+.qd-decision .eyebrow {
+  margin: 0 0 12px;
+  font-size: 11px;
+}
+.qd-reward {
+  font-size: 36px;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+  margin: 0 0 12px;
+}
+.qd-reward span {
+  font-size: 15px;
+  letter-spacing: 0;
+}
+.qd-muted {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 20px;
+}
+.qd-timing {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 20px 0;
+  border-top: 1px solid var(--border);
+  margin: 20px 0 0;
+}
+.qd-timing dt {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.qd-timing dd {
+  margin: 0;
+  font-size: 14px;
+}
+.qd-approval {
+  font-size: 13px;
+  line-height: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.qd-approval strong {
+  font-weight: 500;
+}
+.qd-approval p {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+.qd-readiness {
+  padding-top: 24px;
+  display: grid;
+  gap: 12px;
+}
+.qd-readiness h2,
+.qd-deadline h2 {
+  font-size: 20px;
+  line-height: 1.25;
+  font-weight: 500;
+  margin: 0;
+}
+.qd-readiness p {
+  font-size: 14px;
+  line-height: 22px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.qd-ready-step {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.qd-ready-step strong {
+  font-weight: 500;
+  font-size: 14px;
+}
+.qd-readiness .button {
+  width: 100%;
+  text-align: center;
+  white-space: normal;
+}
+.qd-readiness .banner {
+  margin: 0;
+  display: block;
+}
+.qd-readiness .banner .button {
+  margin-top: 12px;
+}
+.qd-recovery {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 14px;
+}
+.qd-recovery a {
+  color: var(--action);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  overflow-wrap: anywhere;
+}
+.qd-deadline {
+  display: grid;
+  gap: 12px;
+  padding-top: 24px;
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.qd-deadline p {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 20px;
+  margin: 0;
+}
+.qd-policy {
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  font-size: 13px;
+}
+.qd-policy summary,
+.qd-agreement-record summary {
+  min-height: 44px;
+  cursor: pointer;
+  padding: 12px 0;
+}
+.qd-policy p {
+  line-height: 21px;
+  color: var(--muted);
+}
+.qd-agreement {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+.qd-agreement > section {
+  margin-bottom: 40px;
+  max-width: 65ch;
+}
+.qd-agreement .eyebrow {
+  margin: 0 0 10px;
+}
+.qd-agreement h2 {
+  font-size: 26px;
+  line-height: 1.25;
+  font-weight: 500;
+  margin: 0 0 20px;
+  letter-spacing: -0.025em;
+}
+.qd-agreement h3 {
+  font-size: 18px;
+  line-height: 1.3;
+  margin: 24px 0 12px;
+}
+.qd-agreement p {
+  line-height: 1.65;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.qd-preserve {
+  white-space: pre-wrap;
+}
+.qd-requirements {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.qd-requirements li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 16px;
+  padding: 18px 0;
+  border-top: 1px solid var(--border);
+}
+.qd-requirements li > span {
+  font-size: 12px;
+  color: var(--muted);
+  padding-top: 3px;
+}
+.qd-requirements p {
+  margin: 0;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+.qd-agreement a {
+  color: var(--action);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.qd-address {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.qd-agreement-record {
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.qd-workroom {
+  max-width: 1360px;
+  padding: 0 40px 64px;
+  margin: auto;
+}
+[data-theme="dark"] .qd-page img {
+  filter: brightness(0) invert(1);
+}
+@media (max-width: 800px) {
+  .qd-page {
+    padding: 20px 20px 48px;
+  }
+  .qd-context {
+    margin-bottom: 24px;
+  }
+  .qd-context h1 {
+    font-size: 28px;
+  }
+  .qd-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 36px;
+  }
+  .qd-decision,
+  .qd-agreement {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .qd-agreement > section {
+    margin-bottom: 32px;
+  }
+  .qd-workroom {
+    padding: 0 20px 48px;
+  }
+}
+@media (max-width: 360px) {
+  .qd-page,
+  .qd-workroom {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .qd-decision {
+    padding: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qd-page *,
+  .qd-workroom * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+.qd-claim-consent {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+  font-size: 14px;
+  line-height: 22px;
+  margin: 20px 0;
+  cursor: pointer;
+}
+.qd-claim-consent input {
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+.qd-claim-consent input {
+  accent-color: var(--action);
+}

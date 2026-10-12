@@ -5,13 +5,17 @@ import { beforeEach, afterEach, it, expect, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   actor: "worker",
   walletReady: true,
+  account: true,
+  userId: "qa",
+  linked: null as string[] | null,
+  rpcSend: vi.fn(),
   api: vi.fn(),
   prepare: vi.fn(),
   sign: vi.fn(),
 }));
 vi.mock("@solana/react-hooks", () => ({
   useWalletConnection: () => ({
-    wallet: { account: { address: mocks.actor } },
+    wallet: mocks.actor ? { account: { address: mocks.actor } } : null,
   }),
   useSolanaClient: () => ({
     transaction: { prepare: mocks.prepare, sign: mocks.sign },
@@ -19,13 +23,27 @@ vi.mock("@solana/react-hooks", () => ({
 }));
 vi.mock("../src/components/account-provider", () => ({
   useAccount: () => ({
-    me: { user: { id: "qa" }, wallets: [{ wallet: mocks.actor }] },
+    me: mocks.account
+      ? {
+          user: { id: mocks.userId },
+          wallets: (mocks.linked || [mocks.actor]).map((wallet) => ({
+            wallet,
+          })),
+        }
+      : null,
   }),
 }));
 vi.mock("../src/components/wallet-access", () => ({
   useWalletAccess: () => mocks.walletReady,
 }));
-vi.mock("../src/chain/network", () => ({ devnetRpc: async () => ({}) }));
+vi.mock("../src/chain/network", () => ({
+  devnetRpc: async () => ({ sendTransaction: () => ({ send: mocks.rpcSend }) }),
+}));
+vi.mock("@solana/kit", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@solana/kit")>()),
+  getSignatureFromTransaction: () => "known-signature",
+  getBase64EncodedWireTransaction: () => "wire",
+}));
 vi.mock("../src/components/workroom", () => ({ Workroom: () => null }));
 vi.mock("../src/components/header", () => ({ api: mocks.api }));
 vi.mock("../src/components/assistance", () => ({
@@ -70,6 +88,10 @@ beforeEach(() => {
   localStorage.clear();
   mocks.actor = "worker";
   mocks.walletReady = true;
+  mocks.account = true;
+  mocks.userId = "qa";
+  mocks.linked = null;
+  mocks.rpcSend.mockReset();
   mocks.prepare.mockReset();
   mocks.sign.mockReset();
   bounty = {
@@ -106,8 +128,10 @@ afterEach(async () => {
   host.remove();
   vi.useRealTimers();
 });
-async function mount() {
-  await act(async () => root.render(<Details id="quest" review />));
+async function mount(review = true) {
+  await act(async () =>
+    root.render(<Details id={String(bounty.id)} review={review} />),
+  );
 }
 async function tick() {
   await act(async () => vi.advanceTimersByTimeAsync(5000));
@@ -363,5 +387,286 @@ it("discards a pending summary response when wallet access is lost", async () =>
     finish({ id: "stale", contentHash: "stale", manifest: {} }),
   );
   expect(host.querySelector('[role="dialog"]')).toBeNull();
+  expect(mocks.sign).not.toHaveBeenCalled();
+});
+
+async function click(label: string) {
+  await act(async () =>
+    [...host.querySelectorAll<HTMLButtonElement>("button")]
+      .find((b) => b.textContent === label)!
+      .click(),
+  );
+}
+async function claimDialog() {
+  await click("Claim this quest");
+  expect(mocks.sign).not.toHaveBeenCalled();
+  expect(
+    [...host.querySelectorAll<HTMLButtonElement>("button")].find(
+      (b) => b.textContent === "Confirm & open wallet",
+    )?.disabled,
+  ).toBe(true);
+  await act(async () =>
+    host.querySelector<HTMLInputElement>(".qd-claim-consent input")!.click(),
+  );
+}
+function prepareClaim() {
+  bounty = { ...bounty, status: "open", worker: null, deadline: null };
+  process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID =
+    "11111111111111111111111111111111";
+  const original = mocks.api.getMockImplementation()!;
+  mocks.api.mockImplementation(async (path: string, options?: RequestInit) => {
+    if (path === "/api/auth/session") return { wallet: mocks.actor };
+    if (path.endsWith("/operations") && options?.method === "POST")
+      return {
+        operationId: "op",
+        lifetime: {
+          blockhash: "11111111111111111111111111111111",
+          lastValidBlockHeight: "123",
+        },
+        instruction: {
+          programAddress: "11111111111111111111111111111111",
+          accounts: [],
+          data: [],
+        },
+      };
+    if (path === "/api/operations/op")
+      return { operation: { status: "unknown", signature: "known-signature" } };
+    return original(path, options);
+  });
+  mocks.prepare.mockResolvedValue({});
+}
+it("shows contextual guest continuation and requests no private materials on public details", async () => {
+  mocks.account = false;
+  mocks.actor = "";
+  mocks.walletReady = false;
+  bounty = {
+    ...bounty,
+    id: "416c7575-1325-4fac-ad0c-6fdf79a20027",
+    status: "open",
+    worker: null,
+  };
+  await mount(false);
+  const href = host.querySelector(".qd-ready-step a")?.getAttribute("href");
+  expect(href).toBe(
+    "/account?next=%2Fbounties%2F416c7575-1325-4fac-ad0c-6fdf79a20027&role=worker",
+  );
+  expect(host.querySelector("h1")?.textContent).toBe(bounty.title);
+  expect(
+    mocks.api.mock.calls.some(([path]) =>
+      /\/(messages|attachments|submissions|feedback)$/.test(path),
+    ),
+  ).toBe(false);
+  expect(host.textContent).not.toContain(
+    "Open authorized participant materials",
+  );
+});
+it("prevents self claim across every linked wallet on the requester account", async () => {
+  bounty = { ...bounty, status: "open", worker: null };
+  mocks.linked = ["requester", "worker"];
+  await mount(false);
+  expect(host.textContent).toContain(
+    "This is your quest. You cannot claim it.",
+  );
+  expect(
+    [...host.querySelectorAll("button")].some(
+      (b) => b.textContent === "Claim this quest",
+    ),
+  ).toBe(false);
+});
+it("offers contextual explicit wallet guidance without preparing a transaction", async () => {
+  bounty = { ...bounty, status: "open", worker: null };
+  mocks.walletReady = false;
+  const listener = vi.fn();
+  window.addEventListener("bountini-open-wallet", listener);
+  await mount(false);
+  expect(listener).not.toHaveBeenCalled();
+  await click("Verify or change wallet");
+  expect(listener).toHaveBeenCalledOnce();
+  expect(mocks.prepare).not.toHaveBeenCalled();
+  expect(mocks.sign).not.toHaveBeenCalled();
+  window.removeEventListener("bountini-open-wallet", listener);
+});
+it("preserves the agreement after a rejected claim signature without showing success", async () => {
+  prepareClaim();
+  mocks.sign.mockRejectedValue(new Error("User rejected signature"));
+  await mount(false);
+  await claimDialog();
+  await click("Confirm & open wallet");
+  expect(host.textContent).toContain("Signing was declined");
+  expect(host.textContent).toContain("Original brief");
+  expect(host.textContent).not.toContain("Request confirmed");
+  expect(mocks.rpcSend).not.toHaveBeenCalled();
+  expect(mocks.api).toHaveBeenCalledWith(
+    "/api/operations/op",
+    expect.objectContaining({ body: JSON.stringify({ status: "rejected" }) }),
+  );
+});
+it("persists the signature before broadcast and checks unknown confirmation before permitting another claim", async () => {
+  prepareClaim();
+  mocks.sign.mockResolvedValue({});
+  mocks.rpcSend.mockImplementation(async () => {
+    expect(
+      JSON.parse(localStorage.getItem("bountini.operation.quest")!),
+    ).toMatchObject({ status: "submitting", signature: "known-signature" });
+    throw new Error("RPC response lost");
+  });
+  await mount(false);
+  await claimDialog();
+  await click("Confirm & open wallet");
+  expect(host.textContent).toContain("Confirmation is not yet known");
+  expect(
+    [...host.querySelectorAll<HTMLButtonElement>("button")].find(
+      (b) => b.textContent === "Claim this quest",
+    )?.disabled,
+  ).toBe(true);
+  expect(host.textContent).not.toContain("Request confirmed");
+  const previous = mocks.api.getMockImplementation()!;
+  mocks.api.mockImplementation(async (path: string, options?: RequestInit) => {
+    if (path === "/api/operations/op" && !options?.method) {
+      bounty = {
+        ...bounty,
+        status: "in-progress",
+        worker: "worker",
+        deadline: Math.floor(Date.now() / 1000) + 1800,
+      };
+      return {
+        operation: { status: "confirmed", signature: "known-signature" },
+      };
+    }
+    return previous(path, options);
+  });
+  await click("Check confirmation");
+  expect(host.textContent).toContain("Request confirmed");
+  expect(host.textContent).toContain("In progress");
+  expect(
+    mocks.api.mock.calls.filter(
+      ([p, o]) => p.endsWith("/operations") && o?.method === "POST",
+    ),
+  ).toHaveLength(1);
+});
+it("does not broadcast a signed claim after a wallet change", async () => {
+  prepareClaim();
+  let finish!: (v: unknown) => void;
+  mocks.sign.mockImplementation(() => new Promise((r) => (finish = r)));
+  await mount(false);
+  await claimDialog();
+  await click("Confirm & open wallet");
+  mocks.actor = "other-wallet";
+  await mount(false);
+  await act(async () => finish({}));
+  expect(mocks.rpcSend).not.toHaveBeenCalled();
+  expect(host.querySelector("[role=dialog]")).toBeNull();
+  expect(host.textContent).not.toContain("Request confirmed");
+});
+it("does not broadcast a signed claim after an account change", async () => {
+  prepareClaim();
+  let finish!: (v: unknown) => void;
+  mocks.sign.mockImplementation(() => new Promise((r) => (finish = r)));
+  await mount(false);
+  await claimDialog();
+  await click("Confirm & open wallet");
+  mocks.userId = "other-account";
+  await mount(false);
+  await act(async () => finish({}));
+  expect(mocks.rpcSend).not.toHaveBeenCalled();
+  expect(host.textContent).not.toContain("Request confirmed");
+});
+it("does not apply a recovery response to a different wallet identity", async () => {
+  const finishes: ((v: unknown) => void)[] = [];
+  const previous = mocks.api.getMockImplementation()!;
+  mocks.api.mockImplementation((path: string, options?: RequestInit) => {
+    if (path === "/api/bounties/quest/operations")
+      return Promise.resolve({
+        operations:
+          mocks.actor === "worker" ? [{ id: "op", status: "unknown" }] : [],
+      });
+    if (path === "/api/operations/op")
+      return new Promise((r) => finishes.push(r));
+    return previous(path, options);
+  });
+  await mount(false);
+  await click("Check confirmation");
+  mocks.actor = "other-wallet";
+  await mount(false);
+  await act(async () => finishes[0]({ operation: { status: "confirmed" } }));
+  expect(host.textContent).not.toContain("Request confirmed");
+});
+it("shows expiry exactly at the deadline and preserves terminal states as read-only", async () => {
+  mocks.actor = "requester";
+  bounty = {
+    ...bounty,
+    status: "in-review",
+    deadline: Math.floor(Date.now() / 1000) + 1,
+  };
+  await mount(false);
+  expect(host.textContent).not.toContain("Refund expired quest");
+  await act(async () => vi.advanceTimersByTimeAsync(1000));
+  expect(host.textContent).toContain("Refund expired quest");
+  bounty = { ...bounty, status: "paid" };
+  await tick();
+  expect(host.textContent).toContain("Payment confirmed");
+  expect(host.textContent).not.toContain("Refund expired quest");
+  expect(host.textContent).not.toContain("Claim this quest");
+});
+it("shows draft funding without implying a funded agreement, and keeps cancellation and withdrawal actions", async () => {
+  process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID =
+    "11111111111111111111111111111111";
+  mocks.actor = "requester";
+  bounty = { ...bounty, status: "draft", worker: null };
+  await mount(false);
+  expect(host.textContent).toContain("Draft brief");
+  expect(host.textContent).toContain("Fund this quest");
+  expect(host.textContent).not.toContain("The funded agreement");
+  bounty = { ...bounty, status: "open" };
+  await tick();
+  expect(host.textContent).toContain("Cancel and refund");
+  mocks.actor = "worker";
+  bounty = { ...bounty, status: "in-progress", worker: "worker" };
+  await mount(false);
+  expect(host.textContent).toContain("Withdraw and refund requester");
+});
+it("keeps the public agreement available after a refresh failure", async () => {
+  await mount(false);
+  mocks.api.mockRejectedValue(new Error("Service unavailable"));
+  await act(async () => window.dispatchEvent(new Event("focus")));
+  expect(host.textContent).toContain("Original brief");
+  expect(host.textContent).toContain("Service unavailable");
+});
+it("disables an open claim confirmation when a competing claim becomes confirmed", async () => {
+  prepareClaim();
+  await mount(false);
+  await claimDialog();
+  bounty = { ...bounty, status: "in-progress", worker: "another-worker" };
+  await tick();
+  const confirm = [...host.querySelectorAll<HTMLButtonElement>("button")].find(
+    (b) => b.textContent === "Confirm & open wallet",
+  )!;
+  expect(confirm.disabled).toBe(true);
+  await act(async () => confirm.click());
+  expect(mocks.sign).not.toHaveBeenCalled();
+  expect(
+    mocks.api.mock.calls.some(
+      ([p, o]) => p.endsWith("/operations") && o?.method === "POST",
+    ),
+  ).toBe(false);
+});
+it("preserves context when the server rejects a competing claim before preparing a wallet request", async () => {
+  prepareClaim();
+  const previous = mocks.api.getMockImplementation()!;
+  mocks.api.mockImplementation((path: string, options?: RequestInit) => {
+    if (path.endsWith("/operations") && options?.method === "POST") {
+      bounty = { ...bounty, status: "in-progress", worker: "another-worker" };
+      throw new Error("This quest has already been claimed");
+    }
+    return previous(path, options);
+  });
+  await mount(false);
+  await claimDialog();
+  await click("Confirm & open wallet");
+  await tick();
+  expect(host.textContent).toContain("This quest has already been claimed");
+  expect(host.textContent).toContain("Original brief");
+  expect(host.textContent).not.toContain("Request confirmed");
+  expect(host.textContent).not.toContain("Claim this quest");
   expect(mocks.sign).not.toHaveBeenCalled();
 });

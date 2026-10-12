@@ -266,3 +266,25 @@ it("never connects or requests a wallet signature on page load or workspace chan
     ),
   ).toBe(false);
 });
+it("opens contextual wallet guidance only for a signed-in account without connecting", async () => {
+  m.wallet = null;
+  vi.stubGlobal("fetch", vi.fn());
+  await render();
+  expect(host.textContent).not.toContain("No compatible wallet detected");
+  await act(async () =>
+    window.dispatchEvent(new Event("bountini-open-wallet")),
+  );
+  expect(host.textContent).toContain("No compatible wallet detected");
+  expect(m.connect).not.toHaveBeenCalled();
+});
+it("ignores contextual wallet guidance for guests", async () => {
+  m.authenticated = false;
+  m.wallet = null;
+  vi.stubGlobal("fetch", vi.fn());
+  await render();
+  await act(async () =>
+    window.dispatchEvent(new Event("bountini-open-wallet")),
+  );
+  expect(host.textContent).not.toContain("No compatible wallet detected");
+  expect(m.connect).not.toHaveBeenCalled();
+});

@@ -25,9 +25,13 @@ export function Header() {
     useWalletConnection();
   const [open, setOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const walletReturnFocus = useRef<HTMLElement | null>(null);
   function closeWallet() {
     setOpen(false);
-    requestAnimationFrame(() => menuButton.current?.focus());
+    const target = walletReturnFocus.current;
+    requestAnimationFrame(() =>
+      (target?.isConnected ? target : menuButton.current)?.focus(),
+    );
   }
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -67,6 +71,21 @@ export function Header() {
   useEffect(() => {
     if (!me) setOpen(false);
   }, [me?.user.id]);
+  useEffect(() => {
+    const requested = () => {
+      if (me && !loading) {
+        walletReturnFocus.current =
+          document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
+        setError("");
+        setOpen(true);
+      }
+    };
+    window.addEventListener("bountini-open-wallet", requested);
+    return () => window.removeEventListener("bountini-open-wallet", requested);
+  }, [me?.user.id, loading]);
+
   async function signIn() {
     if (!me || loading) return;
     if (!wallet?.signMessage) {
@@ -152,6 +171,7 @@ export function Header() {
                 <Button
                   variant="secondary"
                   onClick={() => {
+                    walletReturnFocus.current = null;
                     closeMenu();
                     setOpen(true);
                   }}
