@@ -28,7 +28,9 @@ export function WorkspaceHeader({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <header className="experience-header">
+      <header
+        className={`experience-header${mode ? "" : " experience-public-header"}`}
+      >
         <Link
           className="experience-home"
           href={homeHref}
@@ -80,7 +82,7 @@ export function WorkspaceHeader({
           className="experience-menu-button"
           aria-haspopup="dialog"
           variant="quiet"
-          aria-label="Open workspace menu"
+          aria-label={mode ? "Open workspace menu" : "Open public menu"}
           aria-expanded={open}
           onClick={() => setOpen(true)}
         >

@@ -1,5 +1,7 @@
+"use client";
 import Link from "next/link";
-import type { Bounty, BountyStatus } from "@/domain/bounty";
+import { motion, useReducedMotion } from "motion/react";
+import { WINDOWS, type Bounty, type BountyStatus } from "@/domain/bounty";
 import { StatusPill, ExperienceIcon } from "../experience/primitives";
 const statusLabels: Record<BountyStatus, string> = {
   draft: "Draft",
@@ -10,47 +12,116 @@ const statusLabels: Record<BountyStatus, string> = {
   paid: "Payment confirmed",
   refunded: "Refund confirmed",
 };
-export function QuestCard({ bounty: b }: { bounty: Bounty }) {
+export function RequesterIdentity({ bounty: b }: { bounty: Bounty }) {
+  const name = b.requesterName?.trim();
+  const parts = name?.split(/\s+/).filter(Boolean);
+  const initials = parts?.length
+    ? [parts[0], ...(parts.length > 1 ? [parts.at(-1)!] : [])]
+        .map((p) => Array.from(p)[0])
+        .join("")
+        .toLocaleUpperCase()
+    : null;
   return (
-    <article className="discovery-quest">
-      <div className="discovery-quest-body">
-        <div className="discovery-meta">
-          <StatusPill>{b.category}</StatusPill>
-          <StatusPill
-            tone={
-              b.status === "open" || b.status === "paid"
-                ? "success"
-                : b.status === "refunded"
-                  ? "warning"
-                  : "neutral"
-            }
-          >
-            {statusLabels[b.status]}
-          </StatusPill>
-        </div>
-        <h3>
-          <Link href={`/bounties/${b.id}`}>{b.title}</Link>
-        </h3>
-        {b.description && (
-          <p className="discovery-description">{b.description}</p>
-        )}
-        <p className="discovery-terms">
-          30-minute delivery · Fixed requirements · One contributor
-          {b.requesterName && <span> · Posted by {b.requesterName}</span>}
-        </p>
+    <div className="discovery-identity" data-component="RequesterIdentity">
+      <span className="discovery-initials" aria-hidden="true">
+        {initials || <ExperienceIcon name="user" size={18} />}
+      </span>
+      <div>
+        <strong>
+          {name ||
+            (b.requester
+              ? `${b.requester.slice(0, 4)}…${b.requester.slice(-4)}`
+              : "Requester")}
+        </strong>
+        <span>Requester</span>
       </div>
-      <div className="discovery-quest-action">
-        <p className="discovery-reward">
-          <strong>{b.reward}</strong> <span>test SOL</span>
-        </p>
+    </div>
+  );
+}
+export function QuestCard({ bounty: b }: { bounty: Bounty }) {
+  const reduced = useReducedMotion();
+  const deadline =
+    b.deadline && !["open", "paid", "refunded", "draft"].includes(b.status)
+      ? new Date(b.deadline * 1000)
+      : null;
+  return (
+    <motion.article
+      className="discovery-quest"
+      data-component="QuestCard"
+      initial={false}
+      whileHover={reduced ? undefined : { y: -2 }}
+      transition={{ duration: 0.16 }}
+    >
+      <div className="discovery-card-top">
+        <RequesterIdentity bounty={b} />
+        <StatusPill
+          tone={
+            b.status === "open" || b.status === "paid"
+              ? "success"
+              : b.status === "refunded"
+                ? "warning"
+                : "neutral"
+          }
+        >
+          {statusLabels[b.status]}
+        </StatusPill>
+      </div>
+      <h3>
+        <Link href={`/bounties/${b.id}`}>{b.title}</Link>
+      </h3>
+      {b.description && (
+        <p className="discovery-description">{b.description}</p>
+      )}
+      <dl className="discovery-metadata" data-component="MetadataGrid">
+        <div>
+          <dt>
+            <ExperienceIcon name="wallet" size={16} />
+            Test SOL reward
+          </dt>
+          <dd>
+            <strong>{b.reward}</strong> <span>test SOL</span>
+          </dd>
+        </div>
+        <div>
+          <dt>
+            <ExperienceIcon name="clock" size={16} />
+            {deadline
+              ? b.status === "in-review"
+                ? "Review due"
+                : "Delivery due"
+              : "Delivery window"}
+          </dt>
+          <dd>
+            {deadline ? (
+              <time dateTime={deadline.toISOString()}>
+                {new Intl.DateTimeFormat(undefined, {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                }).format(deadline)}
+              </time>
+            ) : (
+              `${WINDOWS.delivery / 60} minutes`
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt>
+            <ExperienceIcon name="quest" size={16} />
+            Category
+          </dt>
+          <dd>{b.category}</dd>
+        </div>
+      </dl>
+      <div className="discovery-card-footer">
+        <span>One contributor · Fixed requirements</span>
         <Link
-          className="button secondary"
+          className="discovery-card-link"
           href={`/bounties/${b.id}`}
           aria-label={`View quest: ${b.title}`}
         >
           View quest <ExperienceIcon name="arrow" />
         </Link>
       </div>
-    </article>
+    </motion.article>
   );
 }

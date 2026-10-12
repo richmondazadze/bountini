@@ -2,28 +2,13 @@
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-const m = vi.hoisted(() => ({ api: vi.fn() }));
+const m = vi.hoisted(() => ({ api: vi.fn(), userId: null as string | null }));
 vi.mock("../src/components/header", () => ({ api: m.api }));
 vi.mock("@solana/react-hooks", () => ({
   useWalletConnection: () => ({ wallet: null }),
 }));
 vi.mock("../src/components/account-provider", () => ({
-  useAccount: () => ({ me: null }),
-}));
-vi.mock("../src/components/ui", () => ({
-  Enter: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
-  Banner: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
-  Button: ({
-    children,
-    onClick,
-    pending,
-  }: React.PropsWithChildren<{ onClick: () => void; pending: boolean }>) => (
-    <button disabled={pending} onClick={onClick}>
-      {children}
-    </button>
-  ),
-  Icon: () => null,
-  Badge: () => null,
+  useAccount: () => ({ me: m.userId ? { user: { id: m.userId } } : null }),
 }));
 import { Market } from "../src/components/market";
 let root: Root, host: HTMLDivElement;
@@ -40,6 +25,7 @@ const page = (start: number, count: number, hasMore: boolean) => ({
 beforeEach(() => {
   vi.useFakeTimers();
   m.api.mockReset();
+  m.userId = null;
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true, React });
   host = document.createElement("div");
   document.body.append(host);
@@ -65,7 +51,11 @@ async function start() {
 async function more() {
   await act(async () =>
     [...host.querySelectorAll("button")]
-      .find((b) => b.textContent === "Load more quests")!
+      .find((b) =>
+        ["Load more quests", "Retry loading more"].includes(
+          b.textContent || "",
+        ),
+      )!
       .click(),
   );
 }
@@ -107,11 +97,15 @@ it("discards a load-more response from before a refresh", async () => {
   expect(host.textContent).not.toContain("Load more quests");
 });
 async function category(value: string) {
-  await act(async () => {
-    const select = host.querySelector<HTMLSelectElement>("select")!;
-    select.value = value;
-    select.dispatchEvent(new Event("change", { bubbles: true }));
-  });
+  await act(async () =>
+    [
+      ...host.querySelectorAll<HTMLButtonElement>(
+        ".discovery-categories button",
+      ),
+    ]
+      .find((b) => b.textContent === value)!
+      .click(),
+  );
   await act(async () => vi.advanceTimersByTimeAsync(250));
 }
 it("keeps guest queries public, carries all filters, and renders loading then real results", async () => {
@@ -130,7 +124,7 @@ it("keeps guest queries public, carries all filters, and renders loading then re
     q: "",
     category: "Writing",
     role: "All",
-    state: "All states",
+    state: "open",
     page: "0",
   });
   expect(host.querySelectorAll("article")).toHaveLength(1);
@@ -146,7 +140,10 @@ it("keeps filters after a failure, does not show an empty board, and retries the
   expect(host.querySelector("[role=alert]")?.textContent).toContain(
     "Service unavailable",
   );
-  expect(host.querySelector("select")?.value).toBe("Translation");
+  expect(
+    host.querySelector('.discovery-categories [aria-pressed="true"]')
+      ?.textContent,
+  ).toBe("Translation");
   expect(host.textContent).not.toContain("No quests");
   await act(async () =>
     [...host.querySelectorAll("button")]
@@ -162,7 +159,7 @@ it("distinguishes a successful empty result from an error and can clear all filt
     .mockResolvedValueOnce(page(0, 0, false))
     .mockResolvedValueOnce(page(1, 1, false));
   await start();
-  expect(host.textContent).toContain("No quests right now.");
+  expect(host.textContent).toContain("No open quests right now.");
   await category("Translation");
   expect(host.textContent).toContain("No quests match those filters.");
   await act(async () =>
@@ -171,7 +168,11 @@ it("distinguishes a successful empty result from an error and can clear all filt
       .click(),
   );
   await act(async () => vi.advanceTimersByTimeAsync(250));
-  expect(host.querySelector("select")?.value).toBe("All categories");
+  expect(
+    host.querySelector('.discovery-categories [aria-pressed="true"]')
+      ?.textContent,
+  ).toBe("All categories");
+  expect(host.querySelector("select")?.value).toBe("open");
   expect(host.textContent).toContain("Quest 1");
 });
 it("discards an old query response after filters have changed", async () => {
@@ -195,8 +196,45 @@ it("deduplicates overlapping pages and preserves cards after a pagination error"
   await start();
   await more();
   expect(host.querySelectorAll("article")).toHaveLength(2);
-  expect(host.querySelectorAll("button")).toHaveLength(2);
+  expect(host.querySelector("[role=alert]")?.textContent).toContain(
+    "Page unavailable",
+  );
+  expect(host.textContent).toContain("Retry loading more");
   await more();
   expect(host.querySelectorAll("article")).toHaveLength(3);
   expect(host.textContent).not.toContain("Load more quests");
+});
+
+it("discards the previous account's outstanding feed response", async () => {
+  let finish!: (value: unknown) => void;
+  m.userId = "previous-account";
+  m.api
+    .mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)))
+    .mockResolvedValueOnce(page(90, 1, false));
+  await start();
+  m.userId = "current-account";
+  await act(async () => root.render(<Market />));
+  await act(async () => vi.advanceTimersByTimeAsync(250));
+  await act(async () => finish(page(1, 25, true)));
+  expect(host.querySelectorAll("article")).toHaveLength(1);
+  expect(host.querySelector("h3")?.textContent).toBe("Quest 90");
+  expect(host.textContent).not.toContain("Load more quests");
+});
+it("allows other states and restores Open quests on reset", async () => {
+  m.api.mockResolvedValue(page(1, 1, false));
+  await start();
+  await act(async () => {
+    const select = host.querySelector<HTMLSelectElement>("select")!;
+    select.value = "paid";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await act(async () => vi.advanceTimersByTimeAsync(250));
+  expect(m.api.mock.calls.at(-1)![0]).toContain("state=paid");
+  await act(async () =>
+    [...host.querySelectorAll<HTMLButtonElement>("button")]
+      .find((b) => b.textContent === "Reset filters")!
+      .click(),
+  );
+  await act(async () => vi.advanceTimersByTimeAsync(250));
+  expect(m.api.mock.calls.at(-1)![0]).toContain("state=open");
 });

@@ -9,6 +9,7 @@ const m = vi.hoisted(() => ({
   rolePending: false,
   roleError: "",
   switchRole: vi.fn(),
+  connect: vi.fn(),
   wallet: null as null | {
     account: { address: string };
     connector: { id: string; name: string };
@@ -21,7 +22,7 @@ vi.mock("@solana/react-hooks", () => ({
     connectors: [],
     status: "connected",
     disconnect: vi.fn(),
-    connect: vi.fn(),
+    connect: m.connect,
   }),
 }));
 vi.mock("../src/components/account-provider", () => ({
@@ -65,6 +66,7 @@ beforeEach(() => {
   m.rolePending = false;
   m.roleError = "";
   m.switchRole.mockClear();
+  m.connect.mockClear();
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true, React });
   host = document.createElement("div");
   document.body.append(host);
@@ -179,7 +181,7 @@ it("hides the connector selector from guests even when a wallet is already conne
   expect(host.querySelector("select")).toBeNull();
   await act(async () =>
     host
-      .querySelector<HTMLButtonElement>('[aria-label="Open workspace menu"]')!
+      .querySelector<HTMLButtonElement>('[aria-label="Open public menu"]')!
       .click(),
   );
   expect(host.textContent).not.toContain("Connect wallet");
@@ -238,4 +240,29 @@ it("does not expose workspace or wallet actions while the account is loading", a
   expect(
     host.querySelector("header [role=status]")?.getAttribute("aria-label"),
   ).toBe("Checking your account");
+});
+
+it("never connects or requests a wallet signature on page load or workspace changes", async () => {
+  m.wallet = wallet("AAAA1111");
+  const fetcher = vi.fn(async (_url, init) =>
+    Response.json(
+      init?.method === "DELETE" ? { signedOut: true } : { wallet: "AAAA1111" },
+    ),
+  );
+  vi.stubGlobal("fetch", fetcher);
+  await render();
+  await act(async () => {
+    const select = host.querySelector<HTMLSelectElement>("select")!;
+    select.value = "worker";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  expect(m.switchRole).toHaveBeenCalledWith("worker");
+  expect(m.connect).not.toHaveBeenCalled();
+  expect(m.wallet.signMessage).not.toHaveBeenCalled();
+  expect(
+    fetcher.mock.calls.some(
+      ([url]) =>
+        String(url).includes("/challenge") || String(url).includes("/verify"),
+    ),
+  ).toBe(false);
 });

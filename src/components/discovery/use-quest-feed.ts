@@ -17,10 +17,11 @@ export function useQuestFeed({
   const [bounties, setBounties] = useState<Bounty[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [paginationError, setPaginationError] = useState(false);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All categories");
   const [view, setView] = useState(fixedRole || "All");
-  const [state, setState] = useState("All states");
+  const [state, setState] = useState(mine ? "All states" : "open");
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [morePending, setMorePending] = useState(false);
@@ -37,6 +38,7 @@ export function useQuestFeed({
       setMorePending(false);
       if (!quiet) setLoading(true);
       setError("");
+      setPaginationError(false);
       try {
         const params = new URLSearchParams({
           mine: String(mine),
@@ -67,6 +69,8 @@ export function useQuestFeed({
     [mine, query, category, view, state, me?.user.id],
   );
   useEffect(() => {
+    setBounties([]);
+    setPage(0);
     setLoading(true);
     setHasMore(false);
     setMorePending(false);
@@ -108,6 +112,7 @@ export function useQuestFeed({
     const nextPage = page + 1;
     setMorePending(true);
     setError("");
+    setPaginationError(false);
     try {
       const params = new URLSearchParams({
         mine: String(mine),
@@ -129,8 +134,10 @@ export function useQuestFeed({
       setHasMore(r.hasMore);
       setPage(nextPage);
     } catch (e) {
-      if (sequence === loadSequence.current)
+      if (sequence === loadSequence.current) {
+        setPaginationError(true);
         setError(e instanceof Error ? e.message : "Unable to load more quests");
+      }
     } finally {
       if (moreSequence.current === moreVersion) {
         moreLock.current = null;
@@ -142,6 +149,7 @@ export function useQuestFeed({
     bounties,
     loading,
     error,
+    paginationError,
     query,
     setQuery,
     category,

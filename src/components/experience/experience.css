@@ -353,3 +353,34 @@
     display: none;
   }
 }
+
+/* Approved shared alignment; foundation fonts, colors and radii are unchanged. */
+@media (min-width: 1001px) {
+  .experience-header {
+    padding-left: max(40px, calc((100% - 1280px) / 2));
+    padding-right: max(40px, calc((100% - 1280px) / 2));
+  }
+}
+@media (min-width: 801px) {
+  .experience-public-header .experience-menu-button {
+    display: none;
+  }
+}
+.experience-public-header .experience-network {
+  display: none;
+}
+.experience-public-header .experience-desktop-nav {
+  margin-left: 64px;
+}
+.experience-public-header .experience-public-account {
+  margin-left: auto;
+}
+.experience-public-account .account-link {
+  color: var(--action);
+  font-weight: 500;
+}
+@media (max-width: 800px) {
+  .experience-public-header .experience-public-account {
+    margin-left: auto;
+  }
+}

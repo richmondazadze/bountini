@@ -135,8 +135,9 @@ export function Header() {
                 ["/discover", "Discover"],
               ]
           : [
-              ["/discover", "Discover"],
-              ["/create", "Create a quest"],
+              ["/discover", "Find a quest"],
+              ["/#how-it-works", "How it works"],
+              ["/create", "Post a quest"],
             ]
         ).map(([href, label]) => ({ href, label, active: path === href }))}
         publicAccountContent={!me || loading ? <AccountNav /> : undefined}
@@ -160,9 +161,6 @@ export function Header() {
                     ? `${address.slice(0, 4)}…${address.slice(-4)}`
                     : "Connect wallet"}
                 </Button>
-                <p className="helper">
-                  Workspace mode changes navigation, not quest permissions.
-                </p>
               </>
             )}
           </div>

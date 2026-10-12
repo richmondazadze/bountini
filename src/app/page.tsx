@@ -34,7 +34,7 @@ export default function Home() {
           <span>One clear next step.</span>
         </div>
       </section>
-      <section className="process">
+      <section className="process" id="how-it-works">
         <div className="process-inner">
           <p className="eyebrow">From good intention to done</p>
           <h2>Make contribution simple.</h2>
