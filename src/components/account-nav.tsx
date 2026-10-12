@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { accountHref } from "@/client/account-flow";
 import { useAccount } from "./account-provider";
-export function AccountNav() {
+export function AccountNav({ onNavigate }: { onNavigate?: () => void } = {}) {
   const path = usePathname();
   const { me, loading } = useAccount();
   if (loading)
@@ -19,6 +19,7 @@ export function AccountNav() {
   return (
     <Link
       className="account-link"
+      onClick={onNavigate}
       href={
         me
           ? "/my"
@@ -26,7 +27,7 @@ export function AccountNav() {
               path,
               path === "/create"
                 ? "requester"
-                : path.startsWith("/bounties/")
+                : path === "/discover" || path.startsWith("/bounties/")
                   ? "worker"
                   : undefined,
             )

@@ -1,10 +1,8 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useWalletConnection } from "@solana/react-hooks";
 import { useAccount } from "./account-provider";
-import type { Bounty } from "@/domain/bounty";
-import { api } from "./header";
+import { useQuestFeed } from "./discovery/use-quest-feed";
+import { Discovery } from "./discovery/discovery";
 import { Badge, Banner, Button, Enter, Icon } from "./ui";
 export function Market({
   mine = false,
@@ -13,115 +11,28 @@ export function Market({
   mine?: boolean;
   fixedRole?: "Posted" | "Claimed";
 }) {
-  const { wallet } = useWalletConnection();
-  const { me } = useAccount();
-  const [bounties, setBounties] = useState<Bounty[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("All categories");
-  const [view, setView] = useState(fixedRole || "All");
-  const [state, setState] = useState("All states");
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [morePending, setMorePending] = useState(false);
-  const loadSequence = useRef(0);
-  const refreshing = useRef(false);
-  const load = useCallback(
-    async (quiet = false) => {
-      const sequence = ++loadSequence.current;
-      refreshing.current = true;
-      if (!quiet) setLoading(true);
-      setError("");
-      try {
-        const params = new URLSearchParams({
-          mine: String(mine),
-          q: query,
-          category,
-          role: mine ? view : "All",
-          state,
-          page: "0",
-        });
-        const r = await api<{ bounties: Bounty[]; hasMore: boolean }>(
-          `/api/bounties?${params}`,
-        );
-        if (sequence !== loadSequence.current) return;
-        setBounties(r.bounties);
-        setHasMore(r.hasMore);
-        setPage(0);
-      } catch (e) {
-        if (!quiet && sequence === loadSequence.current)
-          setError(e instanceof Error ? e.message : "Unable to load quests");
-      } finally {
-        if (sequence === loadSequence.current) {
-          refreshing.current = false;
-          setLoading(false);
-        }
-      }
-    },
-    [mine, query, category, view, state, me?.user.id],
-  );
-  useEffect(() => {
-    const debounce = setTimeout(() => void load(), 250);
-    const refresh = () => void load();
-    window.addEventListener("bountini-auth-change", refresh);
-    return () => {
-      loadSequence.current++;
-      clearTimeout(debounce);
-      window.removeEventListener("bountini-auth-change", refresh);
-    };
-  }, [load, wallet?.account.address]);
-  useEffect(() => {
-    let stopped = false;
-    let timer: ReturnType<typeof setTimeout>;
-    const poll = async () => {
-      try {
-        if (document.visibilityState === "visible" && navigator.onLine)
-          await load(true);
-      } finally {
-        if (!stopped) timer = setTimeout(poll, 10000);
-      }
-    };
-    timer = setTimeout(poll, 10000);
-    return () => {
-      stopped = true;
-      clearTimeout(timer);
-    };
-  }, [load]);
-  const visible = bounties;
+  const { me, loading: accountLoading } = useAccount();
+  const feed = useQuestFeed({ mine, fixedRole });
+  const {
+    bounties: visible,
+    loading,
+    error,
+    query,
+    setQuery,
+    category,
+    setCategory,
+    view,
+    setView,
+    state,
+    setState,
+    hasMore,
+    morePending,
+    load,
+    more,
+  } = feed;
   const Heading = mine && fixedRole ? "h2" : "h1";
   const workerView = fixedRole === "Claimed";
-  async function more() {
-    if (refreshing.current || morePending) return;
-    const sequence = loadSequence.current;
-    const nextPage = page + 1;
-    setMorePending(true);
-    try {
-      const params = new URLSearchParams({
-        mine: String(mine),
-        q: query,
-        category,
-        role: mine ? view : "All",
-        state,
-        page: String(nextPage),
-      });
-      const r = await api<{ bounties: Bounty[]; hasMore: boolean }>(
-        `/api/bounties?${params}`,
-      );
-      if (sequence !== loadSequence.current) return;
-      setBounties((previous) => [
-        ...previous,
-        ...r.bounties.filter((next) => !previous.some((b) => b.id === next.id)),
-      ]);
-      setHasMore(r.hasMore);
-      setPage(nextPage);
-    } catch (e) {
-      if (sequence === loadSequence.current)
-        setError(e instanceof Error ? e.message : "Unable to load more quests");
-    } finally {
-      setMorePending(false);
-    }
-  }
+  if (!mine) return <Discovery feed={feed} />;
   return (
     <Enter>
       <div className="page">
@@ -152,7 +63,9 @@ export function Market({
             {workerView ? "Find work" : "Create a quest"} <Icon name="arrow" />
           </Link>
         </div>
-        {mine && !me ? (
+        {accountLoading ? (
+          <p role="status">Loading your account…</p>
+        ) : mine && !me ? (
           <div className="empty">
             <Icon name="wallet" />
             <h2>Your work lives here.</h2>
@@ -237,15 +150,6 @@ export function Market({
                 <Button variant="secondary" onClick={() => void load()}>
                   Retry loading
                 </Button>
-                {hasMore && !loading && (
-                  <Button
-                    variant="secondary"
-                    pending={morePending}
-                    onClick={more}
-                  >
-                    Load more quests
-                  </Button>
-                )}
               </>
             ) : loading ? (
               <p role="status" aria-busy="true">

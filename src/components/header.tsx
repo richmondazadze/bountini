@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useWalletConnection } from "@solana/react-hooks";
 import { Button, Dialog, Banner, Icon } from "./ui";
+import { WorkspaceHeader } from "./experience/workspace-header";
+import { StatusNotice } from "./experience/primitives";
 import { AccountNav } from "./account-nav";
 import { useAccount } from "./account-provider";
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -17,10 +19,16 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 export function Header() {
   const path = usePathname();
-  const { me, loading } = useAccount();
+  const { me, loading, switchRole, rolePending, roleError, roleNotice } =
+    useAccount();
   const { connectors, connect, disconnect, wallet, status } =
     useWalletConnection();
   const [open, setOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  function closeWallet() {
+    setOpen(false);
+    requestAnimationFrame(() => menuButton.current?.focus());
+  }
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
@@ -110,55 +118,70 @@ export function Header() {
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <header>
-        <div className="header-inner">
-          <Link href="/" aria-label="Bountini home">
-            <img
-              className="logo"
-              src="/brand/logos/bountini-horizontal-ink.svg"
-              alt="Bountini"
-              width="180"
-              height="42"
-            />
-          </Link>
-          <nav aria-label="Main navigation">
-            {[
+      <WorkspaceHeader
+        menuButtonRef={menuButton}
+        mode={me && !loading ? me.profile.activeRole : undefined}
+        pending={rolePending}
+        onModeChange={(role) => void switchRole(role)}
+        links={(me && !loading
+          ? me.profile.activeRole === "worker"
+            ? [
+                ["/discover", "Find quests"],
+                ["/my", "My work"],
+              ]
+            : [
+                ["/my", "My quests"],
+                ["/create", "Create a quest"],
+                ["/discover", "Discover"],
+              ]
+          : [
               ["/discover", "Discover"],
-              ["/create", "Create"],
-              ["/my", "My Bountini"],
-            ].map(([href, label]) => (
-              <Link
-                key={href}
-                href={href}
-                aria-current={path === href ? "page" : undefined}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
-          <div className="wallet-nav">
-            <AccountNav />
-            <span className="network">
-              <span aria-hidden="true">●</span> Devnet
-            </span>
+              ["/create", "Create a quest"],
+            ]
+        ).map(([href, label]) => ({ href, label, active: path === href }))}
+        publicAccountContent={!me || loading ? <AccountNav /> : undefined}
+        accountContent={(closeMenu) => (
+          <div className="experience-account-menu">
+            <AccountNav onNavigate={closeMenu} />
             {me && !loading && (
-              <Button
-                variant="secondary"
-                size="compact"
-                onClick={() => setOpen(true)}
-              >
-                <Icon name="wallet" />
-                {address
-                  ? `${address.slice(0, 4)}…${address.slice(-4)}`
-                  : "Connect wallet"}
-              </Button>
+              <>
+                <Link href="/settings" onClick={closeMenu}>
+                  Account & profile
+                </Link>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    closeMenu();
+                    setOpen(true);
+                  }}
+                >
+                  <Icon name="wallet" />
+                  {address
+                    ? `${address.slice(0, 4)}…${address.slice(-4)}`
+                    : "Connect wallet"}
+                </Button>
+                <p className="helper">
+                  Workspace mode changes navigation, not quest permissions.
+                </p>
+              </>
             )}
           </div>
+        )}
+      />
+      {roleError && (
+        <div className="experience-role-feedback">
+          <StatusNotice title="Workspace mode could not be saved" tone="danger">
+            {roleError} Your previous mode is still selected. Try switching
+            again.
+          </StatusNotice>
         </div>
-      </header>
+      )}
+      <span className="experience-sr-only" role="status" aria-live="polite">
+        {rolePending ? "Saving workspace mode…" : roleNotice}
+      </span>
       <Dialog
         open={open && Boolean(me) && !loading}
-        onClose={() => setOpen(false)}
+        onClose={closeWallet}
         title={address ? "Your wallet" : "Connect a wallet"}
       >
         <p>Solana Devnet · Test SOL has no cash value.</p>

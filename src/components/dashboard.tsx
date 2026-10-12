@@ -76,21 +76,6 @@ export function Dashboard() {
       </div>
     );
   const role = me.profile.activeRole;
-  async function switchRole(activeRole: "requester" | "worker") {
-    setPending(true);
-    setError("");
-    try {
-      await api("/api/me", {
-        method: "PATCH",
-        body: JSON.stringify({ activeRole }),
-      });
-      await refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Please try again");
-    } finally {
-      setPending(false);
-    }
-  }
   return (
     <>
       <div className="page">
@@ -99,22 +84,6 @@ export function Dashboard() {
         </p>
         <h1>Welcome, {me.user.name}.</h1>
         <div className="role-switch" aria-label="Dashboard role">
-          <Button
-            variant={role === "requester" ? "primary" : "secondary"}
-            disabled={pending}
-            onClick={() => void switchRole("requester")}
-            aria-pressed={role === "requester"}
-          >
-            Post work
-          </Button>
-          <Button
-            variant={role === "worker" ? "primary" : "secondary"}
-            disabled={pending}
-            onClick={() => void switchRole("worker")}
-            aria-pressed={role === "worker"}
-          >
-            Do work
-          </Button>
           <Link className="button secondary" href="/settings">
             Account & profile
           </Link>
@@ -144,9 +113,9 @@ export function Dashboard() {
         {error && <Banner error>{error}</Banner>}
         {!me.wallets.length && (
           <Banner>
-            Complete your profile, then use “Connect wallet” in the header to
-            link your Solana wallet. Existing quests appear after you prove
-            ownership of their wallet.
+            Complete your profile, then open the header menu and use “Connect
+            wallet” to link your Solana wallet. Existing quests appear after you
+            prove ownership of their wallet.
           </Banner>
         )}
         <section aria-label="Notifications">

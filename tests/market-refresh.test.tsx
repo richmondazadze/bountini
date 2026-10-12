@@ -106,3 +106,97 @@ it("discards a load-more response from before a refresh", async () => {
   expect(host.textContent).not.toContain("Quest 26");
   expect(host.textContent).not.toContain("Load more quests");
 });
+async function category(value: string) {
+  await act(async () => {
+    const select = host.querySelector<HTMLSelectElement>("select")!;
+    select.value = value;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await act(async () => vi.advanceTimersByTimeAsync(250));
+}
+it("keeps guest queries public, carries all filters, and renders loading then real results", async () => {
+  m.api
+    .mockResolvedValueOnce(page(1, 1, false))
+    .mockResolvedValueOnce(page(2, 1, false));
+  await act(async () => root.render(<Market />));
+  expect(host.textContent).toContain("Loading quests…");
+  await act(async () => vi.advanceTimersByTimeAsync(250));
+  expect(m.api.mock.calls[0][0]).toContain("mine=false");
+  await category("Writing");
+  const params = new URL(m.api.mock.calls.at(-1)![0], "http://localhost")
+    .searchParams;
+  expect(Object.fromEntries(params)).toEqual({
+    mine: "false",
+    q: "",
+    category: "Writing",
+    role: "All",
+    state: "All states",
+    page: "0",
+  });
+  expect(host.querySelectorAll("article")).toHaveLength(1);
+  expect(host.textContent).not.toContain("Preview");
+});
+it("keeps filters after a failure, does not show an empty board, and retries the same query", async () => {
+  m.api
+    .mockResolvedValueOnce(page(1, 1, false))
+    .mockRejectedValueOnce(new Error("Service unavailable"))
+    .mockResolvedValueOnce(page(2, 1, false));
+  await start();
+  await category("Translation");
+  expect(host.querySelector("[role=alert]")?.textContent).toContain(
+    "Service unavailable",
+  );
+  expect(host.querySelector("select")?.value).toBe("Translation");
+  expect(host.textContent).not.toContain("No quests");
+  await act(async () =>
+    [...host.querySelectorAll("button")]
+      .find((b) => b.textContent === "Retry loading")!
+      .click(),
+  );
+  expect(m.api.mock.calls.at(-1)![0]).toContain("category=Translation");
+  expect(host.querySelector("[role=alert]")).toBeNull();
+});
+it("distinguishes a successful empty result from an error and can clear all filters", async () => {
+  m.api
+    .mockResolvedValueOnce(page(0, 0, false))
+    .mockResolvedValueOnce(page(0, 0, false))
+    .mockResolvedValueOnce(page(1, 1, false));
+  await start();
+  expect(host.textContent).toContain("No quests right now.");
+  await category("Translation");
+  expect(host.textContent).toContain("No quests match those filters.");
+  await act(async () =>
+    [...host.querySelectorAll("button")]
+      .find((b) => b.textContent === "Reset discovery")!
+      .click(),
+  );
+  await act(async () => vi.advanceTimersByTimeAsync(250));
+  expect(host.querySelector("select")?.value).toBe("All categories");
+  expect(host.textContent).toContain("Quest 1");
+});
+it("discards an old query response after filters have changed", async () => {
+  let finish!: (value: unknown) => void;
+  m.api
+    .mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)))
+    .mockResolvedValueOnce(page(100, 1, false));
+  await start();
+  await category("Writing");
+  await act(async () => finish(page(1, 25, true)));
+  expect(host.querySelectorAll("article")).toHaveLength(1);
+  expect(host.textContent).toContain("Quest 100");
+  expect(host.textContent).not.toContain("Quest 1View");
+  expect(host.textContent).not.toContain("Load more quests");
+});
+it("deduplicates overlapping pages and preserves cards after a pagination error", async () => {
+  m.api
+    .mockResolvedValueOnce(page(1, 2, true))
+    .mockRejectedValueOnce(new Error("Page unavailable"))
+    .mockResolvedValueOnce(page(2, 2, false));
+  await start();
+  await more();
+  expect(host.querySelectorAll("article")).toHaveLength(2);
+  expect(host.querySelectorAll("button")).toHaveLength(2);
+  await more();
+  expect(host.querySelectorAll("article")).toHaveLength(3);
+  expect(host.textContent).not.toContain("Load more quests");
+});

@@ -125,11 +125,13 @@ export function Dialog({
   onClose,
   title,
   children,
+  containFocus = false,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
+  containFocus?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
@@ -140,7 +142,33 @@ export function Dialog({
     if (!open && node.open) node.close();
   }, [open]);
   return (
-    <dialog ref={ref} aria-labelledby={id} onCancel={onClose} onClose={onClose}>
+    <dialog
+      ref={ref}
+      aria-labelledby={id}
+      onCancel={onClose}
+      onClose={onClose}
+      onKeyDown={(event) => {
+        if (!containFocus || event.key !== "Tab") return;
+        const targets = Array.from(
+          event.currentTarget.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter((node) => node.getClientRects().length > 0);
+        const first = targets[0],
+          last = targets.at(-1);
+        if (event.shiftKey && document.activeElement === first && last) {
+          event.preventDefault();
+          last.focus();
+        } else if (
+          !event.shiftKey &&
+          document.activeElement === last &&
+          first
+        ) {
+          event.preventDefault();
+          first.focus();
+        }
+      }}
+    >
       <div className="dialog-heading">
         <h2 id={id}>{title}</h2>
         <Button variant="quiet" onClick={onClose} aria-label="Close dialog">
