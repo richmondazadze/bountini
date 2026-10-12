@@ -152,3 +152,55 @@ it("renders links with labels and existing text-only original and revised submis
   expect(host.querySelector("a")!.getAttribute("rel")).toBe("noreferrer");
   expect(host.textContent).toContain("not their future contents");
 });
+it("shows indeterminate uploads until measured bytes arrive, then server validation without invented progress", async () => {
+  let xhr: any;
+  class UploadRequest {
+    upload: any = {};
+    status = 200;
+    responseText = "";
+    timeout = 0;
+    onload: any;
+    onerror: any;
+    ontimeout: any;
+    onloadend: any;
+    constructor() {
+      xhr = this;
+    }
+    open() {}
+    send() {}
+    abort() {}
+  }
+  vi.stubGlobal("XMLHttpRequest", UploadRequest);
+  await act(async () =>
+    root.render(
+      <DeliverableEditor
+        id="quest"
+        owner="worker"
+        text=""
+        setText={() => {}}
+        disabled={false}
+        onPrepared={() => {}}
+      />,
+    ),
+  );
+  const input = host.querySelector<HTMLInputElement>('input[type="file"]')!;
+  Object.defineProperty(input, "files", {
+    configurable: true,
+    value: [new File(["actual content"], "notes.txt", { type: "text/plain" })],
+  });
+  await act(async () =>
+    input.dispatchEvent(new Event("change", { bubbles: true })),
+  );
+  expect(host.querySelector("progress")?.hasAttribute("value")).toBe(false);
+  expect(host.textContent).toContain("Uploading…");
+  await act(async () =>
+    xhr.upload.onprogress({ lengthComputable: true, loaded: 5, total: 10 }),
+  );
+  expect(host.textContent).toContain("50% · uploading");
+  await act(async () =>
+    xhr.upload.onprogress({ lengthComputable: true, loaded: 10, total: 10 }),
+  );
+  expect(host.textContent).toContain("Upload sent · validating file");
+  expect(host.textContent).not.toContain("99%");
+  vi.unstubAllGlobals();
+});

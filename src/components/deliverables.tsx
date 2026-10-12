@@ -104,12 +104,15 @@ export function ManifestView({ manifest }: { manifest: Manifest }) {
   return (
     <div>
       {manifest.writtenResponse && (
-        <p className="submission-text">{manifest.writtenResponse}</p>
+        <div>
+          <h4>Written response</h4>
+          <p className="submission-text">{manifest.writtenResponse}</p>
+        </div>
       )}
       {manifest.links.length > 0 && (
         <>
           <h4>Deliverable links</h4>
-          <ul>
+          <ul className="manifest-links">
             {manifest.links.map((l, i) => (
               <li key={i}>
                 <a href={l.url} target="_blank" rel="noreferrer">
@@ -139,7 +142,7 @@ export function ManifestView({ manifest }: { manifest: Manifest }) {
 type Upload = {
   id: string;
   file: File;
-  progress: number;
+  progress?: number;
   error?: string;
   attachment?: Attachment;
   uploading: boolean;
@@ -206,7 +209,7 @@ export function DeliverableEditor({
     setUploads((old) =>
       old.map((u) =>
         u.id === entry.id
-          ? { ...u, uploading: true, error: undefined, progress: 0 }
+          ? { ...u, uploading: true, error: undefined, progress: undefined }
           : u,
       ),
     );
@@ -223,7 +226,7 @@ export function DeliverableEditor({
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable)
         update({
-          progress: Math.min(99, Math.round((e.loaded / e.total) * 100)),
+          progress: Math.floor((e.loaded / e.total) * 100),
         });
     };
     const fail = () =>
@@ -266,7 +269,7 @@ export function DeliverableEditor({
     const entries: Upload[] = Array.from(list).map((file) => ({
       id: crypto.randomUUID(),
       file,
-      progress: 0,
+      progress: undefined,
       uploading: false,
     }));
     if (entries.some((u) => !u.file.size || u.file.size > MAX_FILE_BYTES)) {
@@ -393,11 +396,20 @@ export function DeliverableEditor({
         </p>
       </div>
       {uploads.map((u) => (
-        <div key={u.id}>
+        <div
+          key={u.id}
+          className="aw-upload"
+          role="group"
+          aria-label={u.file.name}
+        >
           <p>
             {u.file.name} ·{" "}
             {u.uploading
-              ? `${u.progress}% · uploading and validating`
+              ? u.progress === undefined
+                ? "Uploading…"
+                : u.progress >= 100
+                  ? "Upload sent · validating file…"
+                  : `${u.progress}% · uploading`
               : u.attachment
                 ? "Uploaded"
                 : "Not uploaded"}
@@ -469,8 +481,11 @@ export function DeliverableEditor({
 export function ConfirmedDeliverables({ id }: { id: string }) {
   const [versions, setVersions] = useState<ConfirmedSubmission[] | null>(null);
   const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let cancelled = false;
+    setError("");
+    setVersions(null);
     api<{ submissions: ConfirmedSubmission[] }>(
       `/api/bounties/${id}/submissions`,
       { cache: "no-store" },
@@ -484,15 +499,21 @@ export function ConfirmedDeliverables({ id }: { id: string }) {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, attempt]);
   return error ? (
-    <Banner error>{error}</Banner>
+    <Banner error>
+      {error}{" "}
+      <Button variant="secondary" onClick={() => setAttempt((n) => n + 1)}>
+        Retry confirmed delivery
+      </Button>
+    </Banner>
   ) : !versions ? (
     <p>Loading confirmed submission…</p>
   ) : (
     <>
+      {!versions.length && <p>No confirmed deliveries yet.</p>}
       {versions.map((s, i) => (
-        <section key={s.content_hash || i}>
+        <section key={s.content_hash || i} className="confirmed-version">
           <h3>{s.revision ? "Revised submission" : "Original submission"}</h3>
           {s.manifest ? (
             <ManifestView manifest={s.manifest} />

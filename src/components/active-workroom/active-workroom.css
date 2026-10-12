@@ -1,0 +1,283 @@
+.aw-page {
+  max-width: 1360px;
+  margin: auto;
+  padding: 24px 40px 64px;
+}
+.aw-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.aw-context {
+  display: flex;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 20px 0 28px;
+  border-bottom: 1px solid var(--border);
+}
+.aw-context h1 {
+  font-size: clamp(24px, 2.3vw, 32px);
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  max-width: 42ch;
+  overflow-wrap: anywhere;
+  margin: 10px 0 16px;
+}
+.aw-summary {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-width: 180px;
+}
+.aw-summary strong {
+  font-size: 24px;
+  font-weight: 500;
+}
+.aw-next {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 32px;
+  border: 1px solid var(--border);
+  background: var(--subtle);
+  padding: 24px;
+  margin: 24px 0 16px;
+}
+.aw-next h2 {
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  margin: 8px 0;
+}
+.aw-next p {
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 76ch;
+  margin: 8px 0;
+}
+.aw-next > .button {
+  flex-shrink: 0;
+}
+.aw-receipt {
+  font-size: 13px;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+}
+.aw-nav {
+  display: flex;
+  gap: 28px;
+  overflow: auto;
+  border-bottom: 1px solid var(--border);
+  margin: 12px 0 28px;
+}
+.aw-nav > a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  font-size: 14px;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.aw-nav > a[aria-current] {
+  color: var(--action);
+}
+.aw-nav-line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--action);
+}
+.aw-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 56px;
+  align-items: start;
+}
+.aw-content {
+  min-width: 0;
+}
+.aw-section-heading {
+  font-size: 26px;
+  font-weight: 500;
+  margin: 0 0 24px;
+}
+.aw-section[hidden] {
+  display: none;
+}
+.aw-section {
+  min-width: 0;
+}
+.aw-section .panel {
+  background: var(--surface);
+  padding: 24px;
+  border: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+.aw-section .workroom {
+  border-top: 0;
+  padding: 0;
+  margin: 0;
+}
+.aw-section .workroom > h2 {
+  font-size: 20px;
+}
+.aw-section .message-list {
+  padding: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+}
+.aw-section .message {
+  background: var(--subtle);
+}
+.aw-section .message.mine {
+  border-left-color: var(--action);
+}
+.aw-controls {
+  border: 1px solid var(--border);
+  padding: 24px;
+  background: var(--subtle);
+}
+.aw-controls .button {
+  margin-top: 12px;
+  width: 100%;
+}
+.aw-controls h2,
+.aw-controls h3 {
+  font-size: 18px;
+  font-weight: 500;
+}
+.aw-controls p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.aw-section .deliverable-file,
+.aw-upload {
+  border: 1px solid var(--border);
+  background: var(--subtle);
+  padding: 18px;
+  margin: 16px 0;
+  overflow-wrap: anywhere;
+}
+.aw-section .field {
+  margin: 20px 0;
+}
+.aw-section .submission-text {
+  line-height: 1.7;
+  max-width: 65ch;
+}
+.aw-section .timeline p {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.aw-section .manifest-links {
+  list-style: none;
+  padding: 0;
+}
+.aw-section .manifest-links li {
+  padding: 16px;
+  border: 1px solid var(--border);
+  margin: 12px 0;
+}
+.aw-section .confirmed-version {
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.aw-page pre {
+  max-width: 100%;
+  overflow: auto;
+}
+.aw-page [tabindex="-1"]:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 6px;
+}
+@media (max-width: 800px) {
+  .aw-page {
+    padding: 16px 20px 48px;
+  }
+  .aw-context {
+    flex-direction: column;
+    gap: 20px;
+  }
+  .aw-summary {
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+  }
+  .aw-next {
+    display: block;
+    padding: 20px;
+  }
+  .aw-next > .button {
+    width: 100%;
+    margin-top: 12px;
+  }
+  .aw-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .aw-nav {
+    gap: 24px;
+  }
+  .aw-controls {
+    order: 2;
+  }
+  .aw-section .panel {
+    padding: 18px;
+  }
+}
+@media (max-width: 360px) {
+  .aw-page {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aw-page * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+.aw-next {
+  border-left: 3px solid var(--action);
+}
+.aw-controls .discovery-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0;
+}
+.aw-controls .discovery-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--action);
+  font-size: 12px;
+}
+.aw-controls .discovery-identity > div {
+  display: grid;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+.aw-controls .discovery-identity strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+.aw-controls .discovery-identity span {
+  font-size: 12px;
+  color: var(--muted);
+}

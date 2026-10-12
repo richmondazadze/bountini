@@ -95,3 +95,51 @@ it("discards history loaded for a previous account", async () => {
   expect(host.textContent).toContain("Message 100");
   expect(host.textContent).not.toContain("Load earlier messages");
 });
+it("restores account-specific message drafts without overwriting them on load", async () => {
+  localStorage.setItem(
+    "bountini.messages.v1:quest:owner",
+    JSON.stringify({ body: "Retained draft", clientId: "retry-id" }),
+  );
+  m.api.mockResolvedValue({ messages: [], hasMore: false });
+  await render();
+  expect(host.querySelector("textarea")?.value).toBe("Retained draft");
+  expect(
+    JSON.parse(localStorage.getItem("bountini.messages.v1:quest:owner")!).body,
+  ).toBe("Retained draft");
+});
+it("does not move a reader to the latest message while reading earlier history", async () => {
+  m.api
+    .mockResolvedValueOnce({ messages: [message(1)], hasMore: false })
+    .mockResolvedValue({ messages: [message(1), message(2)], hasMore: false });
+  await render();
+  const list = host.querySelector<HTMLDivElement>(".message-list")!;
+  Object.defineProperties(list, {
+    scrollHeight: { configurable: true, value: 1000 },
+    clientHeight: { configurable: true, value: 200 },
+  });
+  list.scrollTop = 120;
+  await act(async () =>
+    list.dispatchEvent(new Event("scroll", { bubbles: true })),
+  );
+  await act(async () => vi.advanceTimersByTimeAsync(5000));
+  expect(list.scrollTop).toBe(120);
+  expect(host.textContent).toContain("Show new messages");
+  expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+});
+it("preserves the visible history anchor when older messages are prepended", async () => {
+  m.api
+    .mockResolvedValueOnce({ messages: [message(51)], hasMore: true })
+    .mockResolvedValueOnce({ messages: [message(1)], hasMore: false });
+  await render();
+  const list = host.querySelector<HTMLDivElement>(".message-list")!;
+  Object.defineProperties(list, {
+    scrollHeight: {
+      configurable: true,
+      get: () => host.querySelectorAll("article").length * 200,
+    },
+    clientHeight: { configurable: true, value: 100 },
+  });
+  list.scrollTop = 40;
+  await older();
+  expect(list.scrollTop).toBe(240);
+});

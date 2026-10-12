@@ -488,6 +488,12 @@ it("offers contextual explicit wallet guidance without preparing a transaction",
 });
 it("preserves the agreement after a rejected claim signature without showing success", async () => {
   prepareClaim();
+  const prior = mocks.api.getMockImplementation()!;
+  mocks.api.mockImplementation((path: string, options?: RequestInit) =>
+    path === "/api/operations/op"
+      ? { operation: { status: "rejected" } }
+      : prior(path, options),
+  );
   mocks.sign.mockRejectedValue(new Error("User rejected signature"));
   await mount(false);
   await claimDialog();
@@ -669,4 +675,31 @@ it("preserves context when the server rejects a competing claim before preparing
   expect(host.textContent).not.toContain("Request confirmed");
   expect(host.textContent).not.toContain("Claim this quest");
   expect(mocks.sign).not.toHaveBeenCalled();
+});
+
+it("checks persisted signature after a concurrent rejection acknowledgement before unlocking retry", async () => {
+  prepareClaim();
+  const prior = mocks.api.getMockImplementation()!;
+  mocks.api.mockImplementation((path: string, options?: RequestInit) =>
+    path === "/api/operations/op"
+      ? options?.method === "PATCH"
+        ? { operation: { status: "rejected" } }
+        : {
+            operation: { status: "unknown", signature: "concurrent-signature" },
+          }
+      : prior(path, options),
+  );
+  mocks.sign.mockRejectedValue(new Error("User rejected signature"));
+  await mount(false);
+  await claimDialog();
+  await click("Confirm & open wallet");
+  expect(host.textContent).toContain("Confirmation is not yet known");
+  expect(
+    [...host.querySelectorAll<HTMLButtonElement>("button")].find(
+      (b) => b.textContent === "Claim this quest",
+    )?.disabled,
+  ).toBe(true);
+  expect(
+    JSON.parse(localStorage.getItem("bountini.operation.quest")!),
+  ).toMatchObject({ status: "unknown", signature: "concurrent-signature" });
 });

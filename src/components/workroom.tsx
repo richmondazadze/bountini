@@ -1,5 +1,11 @@
 "use client";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import Link from "next/link";
 import { accountHref } from "@/client/account-flow";
 import { useAccount } from "./account-provider";
@@ -38,7 +44,14 @@ export function Workroom({
   const [notice, setNotice] = useState("");
   const generation = useRef(0);
   const draftId = useRef<string | null>(null);
-  const end = useRef<HTMLDivElement>(null);
+  const thread = useRef<HTMLDivElement>(null);
+  const pinned = useRef(true);
+  const prepend = useRef<{ height: number; top: number } | null>(null);
+  const lastMessage = useRef<string | undefined>(undefined);
+  const [newMessages, setNewMessages] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const skipDraftSave = useRef(false);
+  const storageKey = `bountini.messages.v1:${id}:${me?.user.id || "guest"}`;
   useEffect(() => {
     const g = ++generation.current;
     let stopped = false;
@@ -51,8 +64,21 @@ export function Workroom({
     setReport(false);
     setReason("");
     setNotice("");
+    skipDraftSave.current = true;
     setBody("");
     draftId.current = null;
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+      if (participant && saved) {
+        setBody(saved.body || "");
+        draftId.current = saved.clientId || null;
+      }
+    } catch {}
+    setLoading(participant);
+    pinned.current = true;
+    prepend.current = null;
+    lastMessage.current = undefined;
+    setNewMessages(false);
     setError("");
     const poll = async (force = false) => {
       try {
@@ -81,6 +107,7 @@ export function Workroom({
         if (!stopped && g === generation.current)
           setError(e instanceof Error ? e.message : "Unable to load messages");
       } finally {
+        if (!stopped && g === generation.current) setLoading(false);
         if (!stopped) timer = setTimeout(() => void poll(), 5000);
       }
     };
@@ -92,8 +119,33 @@ export function Workroom({
     };
   }, [id, me?.user.id, participant]);
   useEffect(() => {
-    end.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [messages.at(-1)?.id]);
+    if (skipDraftSave.current) {
+      skipDraftSave.current = false;
+      return;
+    }
+    if (!participant) return;
+    try {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({ body, clientId: draftId.current }),
+      );
+    } catch {}
+  }, [body, storageKey, participant]);
+  useLayoutEffect(() => {
+    const el = thread.current;
+    if (!el) return;
+    const latest = messages.at(-1)?.id;
+    if (prepend.current) {
+      el.scrollTop =
+        prepend.current.top + el.scrollHeight - prepend.current.height;
+      prepend.current = null;
+    } else if (pinned.current && el.clientHeight > 0) {
+      el.scrollTop = el.scrollHeight;
+    } else if (lastMessage.current && latest !== lastMessage.current) {
+      setNewMessages(true);
+    }
+    lastMessage.current = latest;
+  }, [messages]);
   async function send(e: FormEvent) {
     e.preventDefault();
     if (!body.trim()) return;
@@ -102,6 +154,12 @@ export function Workroom({
     setError("");
     draftId.current ??= crypto.randomUUID();
     try {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({ body, clientId: draftId.current }),
+      );
+    } catch {}
+    try {
       await api(`/api/bounties/${id}/messages`, {
         method: "POST",
         body: JSON.stringify({ body, clientId: draftId.current }),
@@ -109,6 +167,8 @@ export function Workroom({
       if (g !== generation.current) return;
       setBody("");
       draftId.current = null;
+      pinned.current = true;
+      setNewMessages(false);
       const r = await api<{ messages: Message[] }>(
         `/api/bounties/${id}/messages`,
         { cache: "no-store" },
@@ -143,7 +203,7 @@ export function Workroom({
   if (!participant) return null;
   return (
     <section className="workroom" aria-label="Participant communication">
-      <h2>Quest workroom</h2>
+      <h2>Participant messages</h2>
       <p className="helper">
         Private messages between this quest’s participants. Messages do not
         change the funded agreement or extend deadlines.
@@ -164,6 +224,11 @@ export function Workroom({
                 `/api/bounties/${id}/messages?before=${messages[0].seq}`,
               );
               if (g !== generation.current) return;
+              if (thread.current)
+                prepend.current = {
+                  height: thread.current.scrollHeight,
+                  top: thread.current.scrollTop,
+                };
               setMessages((old) => {
                 const merged = new Map(old.map((m) => [m.id, m]));
                 r.messages.forEach((m) => merged.set(m.id, m));
@@ -189,7 +254,36 @@ export function Workroom({
           Load earlier messages
         </Button>
       )}
-      <div className="message-list" aria-live="polite">
+      {loading && <p role="status">Loading messages…</p>}
+      {newMessages && (
+        <Button
+          variant="secondary"
+          onClick={() => {
+            const el = thread.current;
+            if (el) {
+              el.scrollTop = el.scrollHeight;
+              pinned.current = true;
+              setNewMessages(false);
+            }
+          }}
+        >
+          Show new messages
+        </Button>
+      )}
+      <div
+        className="message-list"
+        ref={thread}
+        tabIndex={0}
+        aria-label="Message history"
+        onScroll={() => {
+          const el = thread.current;
+          if (el) {
+            pinned.current =
+              el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+            if (pinned.current) setNewMessages(false);
+          }
+        }}
+      >
         {messages.length ? (
           messages.map((m) => (
             <article
@@ -208,10 +302,10 @@ export function Workroom({
           ))
         ) : (
           <p className="muted">
-            No messages yet. Use this space to clarify delivery and feedback.
+            {loading ? "" : "No messages yet."} Use this space to clarify
+            delivery and feedback.
           </p>
         )}
-        <div ref={end} />
       </div>
       <form className="account-form" onSubmit={send}>
         <div className="field">

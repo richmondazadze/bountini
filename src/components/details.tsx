@@ -2,6 +2,8 @@
 import { useWalletAccess } from "./wallet-access";
 import { Workroom } from "./workroom";
 import { QuestDetails } from "./quest-details/quest-details";
+import { RequesterIdentity } from "./discovery/quest-card";
+import { ActiveWorkroom } from "./active-workroom/active-workroom";
 import {
   DeliverableEditor,
   ConfirmedDeliverables,
@@ -406,7 +408,19 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
               body: JSON.stringify({ status: "rejected" }),
             });
           } catch {}
-          setOperation({ id: opId, status: "rejected" });
+          if (!validIdentity()) return;
+          // Another tab may have saved a signature while this signing request was declined.
+          // Read the persisted operation instead of trusting the rejection acknowledgement.
+          try {
+            const current = await api<{
+              operation: { status: TransactionStatus; signature?: string };
+            }>(`/api/operations/${opId}`);
+            if (!validIdentity()) return;
+            setOperation({ id: opId, ...current.operation });
+            if (current.operation.status === "confirmed") await load();
+          } catch {
+            if (validIdentity()) setOperation({ id: opId, status: "unknown" });
+          }
         } else
           setOperation({ id: opId, status: "unknown", signature: txSignature });
       }
@@ -585,78 +599,28 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
     );
 
   return (
-    <Enter>
-      <div className="page">
-        <p className="breadcrumb">
-          <Link href="/discover">Discover</Link> /{" "}
-          <Link href={`/bounties/${id}`}>{b.title}</Link>
-          {review ? " / Submit & review" : ""}
-        </p>
-        <div className="page-heading">
-          <div>
-            <p className="eyebrow">
-              {b.category} · {review ? "Submit & review" : "Quest details"}
-            </p>
-            <h1>{b.title}</h1>
-            <Badge status={b.status} />
-            {b.requesterProfileId && (
-              <p className="helper">
-                Requester:{" "}
-                <Link href={`/people/${b.requesterProfileId}`}>
-                  {b.requesterName}
-                </Link>
-              </p>
-            )}
-            {b.workerProfileId && (
-              <p className="helper">
-                Worker:{" "}
-                <Link href={`/people/${b.workerProfileId}`}>
-                  {b.workerName}
-                </Link>
-              </p>
-            )}
-          </div>
-        </div>
-        {!me && (
-          <Banner>
-            <Link href={accountHref(`/bounties/${id}`, "worker")}>
-              Sign in or create an account
-            </Link>{" "}
-            to post, claim or communicate.
-          </Banner>
-        )}
-        {me && (!actor || !me.wallets.some((w) => w.wallet === actor)) && (
-          <Banner>
-            Connect a linked wallet and sign a message in the header to use
-            escrow actions. Your account can still view its workroom.
-          </Banner>
-        )}
-        {error && <Banner error>{error}</Banner>}
-        {!configured && (
-          <Banner>
-            Escrow deployment is pending. You can review the quest, but funding
-            and settlement are unavailable.
-          </Banner>
-        )}
-        {operation && (
+    <ActiveWorkroom
+      b={b}
+      requester={requester}
+      worker={worker}
+      ready={Boolean(
+        walletReady &&
+        actor &&
+        me?.wallets.some((w) => w.wallet === actor) &&
+        (actor === b.requester || actor === b.worker),
+      )}
+      now={now}
+      serverTime={serverTime}
+      operation={operation}
+      pending={pending}
+      statusFresh={statusFresh}
+      error={error}
+      onCheck={() => void checkOperation()}
+      onRetry={() => void load()}
+      onExpire={() => setConfirmation("expire")}
+      sections={{
+        overview: (
           <>
-            <TransactionStatusView
-              status={operation.status}
-              signature={operation.signature}
-            />
-            {unresolved && (
-              <Button
-                variant="secondary"
-                pending={pending}
-                onClick={checkOperation}
-              >
-                Check transaction status
-              </Button>
-            )}
-          </>
-        )}
-        <div className="split">
-          <div className="stack">
             <section>
               <h2>The brief</h2>
               <p className="submission-text">{b.description}</p>
@@ -691,137 +655,145 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
                 </p>
               </section>
             )}
-            {review ? (
-              <>
-                {(worker || requester) && (
-                  <ConfirmedFeedback
-                    key={`${id}:${actor}:${authVersion}:${feedbackVersion}:${b.status}`}
+          </>
+        ),
+        messages: (
+          <Workroom
+            key={`${id}:${me?.user.id || "guest"}`}
+            id={id}
+            requester={b.requester}
+            worker={b.worker}
+          />
+        ),
+        deliverables: (
+          <>
+            {" "}
+            {(worker || requester) && (
+              <ConfirmedFeedback
+                key={`${id}:${actor}:${authVersion}:${feedbackVersion}:${b.status}`}
+                id={id}
+              />
+            )}
+            {worker &&
+              ["in-progress", "revision-requested"].includes(b.status) && (
+                <section className="panel">
+                  <h2>
+                    {b.revisionUsed
+                      ? "Submit your revision"
+                      : "Submit your work"}
+                  </h2>
+                  <DeliverableEditor
+                    key={`${id}:${identity}`}
+                    id={id}
+                    owner={me!.user.id}
+                    text={text}
+                    setText={setText}
+                    disabled={disabled || !configured || !allowed("submit")}
+                    onPrepared={(value) => {
+                      setFrozen(value);
+                      setConfirmation("submit");
+                    }}
+                  />
+                </section>
+              )}
+            {(requester || worker) &&
+              ["in-review", "revision-requested", "paid", "refunded"].includes(
+                b.status,
+              ) && (
+                <ConfirmedDeliverables
+                  key={`delivery:${id}:${identity}:${submissionVersion}`}
+                  id={id}
+                />
+              )}
+            {!allowed("submit") && (
+              <p className="helper">
+                New deliveries require the assigned contributor’s verified
+                wallet, an active delivery window and no pending request.
+                Confirmed versions remain unchanged.
+              </p>
+            )}
+          </>
+        ),
+        review: (
+          <>
+            {" "}
+            {(worker || requester) &&
+              ["in-review", "paid", "refunded", "revision-requested"].includes(
+                b.status,
+              ) && (
+                <section className="panel">
+                  <h2>Review the work</h2>
+                  <ConfirmedDeliverables
+                    key={`review:${id}:${actor}:${authVersion}:${submissionVersion}`}
                     id={id}
                   />
-                )}
-                {worker &&
-                  ["in-progress", "revision-requested"].includes(b.status) && (
-                    <section className="panel">
-                      <h2>
-                        {b.revisionUsed
-                          ? "Submit your revision"
-                          : "Submit your work"}
-                      </h2>
-                      <DeliverableEditor
-                        key={`${id}:${identity}`}
-                        id={id}
-                        owner={me!.user.id}
-                        text={text}
-                        setText={setText}
-                        disabled={disabled || !configured || !allowed("submit")}
-                        onPrepared={(value) => {
-                          setFrozen(value);
-                          setConfirmation("submit");
-                        }}
-                      />
-                    </section>
+                  <AdvisoryReview
+                    key={`advisory:${id}:${actor}:${authVersion}:${submissionVersion}`}
+                    bountyId={id}
+                  />
+                  {requester && b.status === "in-review" && (
+                    <>
+                      <div className="field">
+                        <label htmlFor="feedback">Specific feedback</label>
+                        <textarea
+                          id="feedback"
+                          value={feedback}
+                          onChange={(e) => setFeedback(e.target.value)}
+                          maxLength={20000}
+                        />
+                      </div>
+                      <div className="actions">
+                        <Button
+                          disabled={
+                            disabled || !configured || !allowed("approve")
+                          }
+                          onClick={() => setConfirmation("approve")}
+                        >
+                          Approve & pay
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          disabled={
+                            disabled ||
+                            !configured ||
+                            !allowed("revise") ||
+                            !feedback.trim()
+                          }
+                          onClick={() => setConfirmation("revise")}
+                        >
+                          Request one revision
+                        </Button>
+                        <Button
+                          variant="quiet"
+                          disabled={
+                            disabled ||
+                            !configured ||
+                            !allowed("reject") ||
+                            !feedback.trim()
+                          }
+                          onClick={() => setConfirmation("reject")}
+                        >
+                          Record rejection
+                        </Button>
+                      </div>
+                      <p className="helper" style={{ marginTop: 16 }}>
+                        Rejection records feedback. Funds stay locked until
+                        review expiry; you may still approve before then.
+                      </p>
+                    </>
                   )}
-                {(worker || requester) &&
-                  [
-                    "in-review",
-                    "paid",
-                    "refunded",
-                    "revision-requested",
-                  ].includes(b.status) &&
-                  submissionVersion && (
-                    <section className="panel">
-                      <h2>Review the work</h2>
-                      <ConfirmedDeliverables
-                        key={`${id}:${actor}:${authVersion}:${submissionVersion}`}
-                        id={id}
-                      />
-                      <AdvisoryReview
-                        key={`${id}:${actor}:${authVersion}:${submissionVersion}`}
-                        bountyId={id}
-                      />
-                      {requester && b.status === "in-review" && (
-                        <>
-                          <div className="field">
-                            <label htmlFor="feedback">Specific feedback</label>
-                            <textarea
-                              id="feedback"
-                              value={feedback}
-                              onChange={(e) => setFeedback(e.target.value)}
-                              maxLength={20000}
-                            />
-                          </div>
-                          <div className="actions">
-                            <Button
-                              disabled={
-                                disabled || !configured || !allowed("approve")
-                              }
-                              onClick={() => setConfirmation("approve")}
-                            >
-                              Approve & pay
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              disabled={
-                                disabled ||
-                                !configured ||
-                                !allowed("revise") ||
-                                !feedback.trim()
-                              }
-                              onClick={() => setConfirmation("revise")}
-                            >
-                              Request one revision
-                            </Button>
-                            <Button
-                              variant="quiet"
-                              disabled={
-                                disabled ||
-                                !configured ||
-                                !allowed("reject") ||
-                                !feedback.trim()
-                              }
-                              onClick={() => setConfirmation("reject")}
-                            >
-                              Record rejection
-                            </Button>
-                          </div>
-                          <p className="helper" style={{ marginTop: 16 }}>
-                            Rejection records feedback. Funds stay locked until
-                            review expiry; you may still approve before then.
-                          </p>
-                        </>
-                      )}
-                      <Banner>
-                        Review is yours to make. AI feedback is advisory only.
-                      </Banner>
-                    </section>
-                  )}
-                {!worker && !requester && (
                   <Banner>
-                    Only the requester and assigned worker can submit or review
-                    this quest.
+                    Review is yours to make. AI feedback is advisory only.
                   </Banner>
-                )}
-              </>
-            ) : (
-              <Link
-                href={
-                  me
-                    ? `/bounties/${id}/review`
-                    : accountHref(`/bounties/${id}/review`, "worker")
-                }
-                className="button secondary"
-              >
-                {me ? "Open submit & review" : "Sign in to submit or review"}{" "}
-                <Icon name="arrow" />
-              </Link>
-            )}
-            <section>
-              <h3>Participants</h3>
-              <p className="helper address">Requester: {b.requester}</p>
-              <p className="helper address">
-                Contributor: {b.worker || "Available for one contributor"}
-              </p>
-            </section>
+                </section>
+              )}
+            {!["in-review", "revision-requested", "paid", "refunded"].includes(
+              b.status,
+            ) && <p>No confirmed delivery is available for review yet.</p>}
+          </>
+        ),
+        activity: (
+          <>
             <section>
               <h3>Activity</h3>
               <div className="timeline">
@@ -854,99 +826,108 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
                 )}
               </div>
             </section>
-          </div>
-          <aside className="panel" style={{ alignSelf: "start" }}>
-            <p className="eyebrow">Reward · Solana Devnet</p>
-            <p className="detail-reward">{b.reward} SOL</p>
+          </>
+        ),
+      }}
+      controls={
+        <>
+          {" "}
+          <h2>Participants</h2>
+          <RequesterIdentity bounty={b} />
+          {b.worker && (
+            <p className="helper address">
+              Contributor: {b.workerName || b.worker}
+            </p>
+          )}
+          <hr
+            style={{
+              border: 0,
+              borderTop: "1px solid var(--border)",
+              margin: "24px 0",
+            }}
+          />
+          <p className="eyebrow">Reward · Solana Devnet</p>
+          <p className="detail-reward">{b.reward} test SOL</p>
+          <p className="helper">
+            Test SOL has no cash value. Network fees and rent are separate.
+          </p>
+          <hr
+            style={{
+              border: 0,
+              borderTop: "1px solid var(--border)",
+              margin: "24px 0",
+            }}
+          />
+          <p>
+            30 minutes to deliver.
+            <br />
+            10 minutes to review.
+            <br />
+            One optional revision.
+          </p>
+          {!actor && (
             <p className="helper">
-              Test SOL has no cash value. Network fees and rent are separate.
+              Connect a linked wallet and verify it in the header to take
+              action.
             </p>
-            <hr
-              style={{
-                border: 0,
-                borderTop: "1px solid var(--border)",
-                margin: "24px 0",
-              }}
-            />
-            <p>
-              30 minutes to deliver.
-              <br />
-              10 minutes to review.
-              <br />
-              One optional revision.
-            </p>
-            {!actor && (
-              <p className="helper">
-                Connect a linked wallet and verify it in the header to take
-                action.
-              </p>
-            )}
-            {b.status === "draft" && requester && (
-              <Button
-                disabled={
-                  disabled ||
-                  !configured ||
-                  !walletReady ||
-                  actor !== b.requester ||
-                  !me?.wallets.some((w) => w.wallet === actor)
-                }
-                onClick={() => setConfirmation("fund")}
-              >
-                Fund escrow
-              </Button>
-            )}
-            {allowed("claim") && (
-              <Button
-                disabled={disabled || !configured}
-                onClick={() => setConfirmation("claim")}
-              >
-                Claim this quest
-              </Button>
-            )}
-            {allowed("cancel") && (
-              <Button
-                variant="secondary"
-                disabled={disabled || !configured}
-                onClick={() => setConfirmation("cancel")}
-              >
-                Cancel & refund
-              </Button>
-            )}
-            {allowed("expire") && (
-              <Button
-                variant="secondary"
-                disabled={disabled || !configured}
-                onClick={() => setConfirmation("expire")}
-              >
-                Refund expired quest
-              </Button>
-            )}
-            {allowed("withdraw") && (
-              <Button
-                variant="quiet"
-                disabled={disabled || !configured}
-                onClick={() => setConfirmation("withdraw")}
-              >
-                Withdraw & refund requester
-              </Button>
-            )}
-            <p className="helper" style={{ marginTop: 24 }}>
-              Reward and requirements are fixed at funding. Only the requester
-              approves payment. Work may remain unpaid on rejection or expiry.
-            </p>
-          </aside>
-        </div>
-      </div>
-      <div className="page">
-        <Workroom
-          key={`${id}:${me?.user.id || "guest"}`}
-          id={id}
-          requester={b.requester}
-          worker={b.worker}
-        />
-      </div>
-      {confirmationDialog}
-    </Enter>
+          )}
+          {b.status === "draft" && requester && (
+            <Button
+              disabled={
+                disabled ||
+                !configured ||
+                !walletReady ||
+                actor !== b.requester ||
+                !me?.wallets.some((w) => w.wallet === actor)
+              }
+              onClick={() => setConfirmation("fund")}
+            >
+              Fund escrow
+            </Button>
+          )}
+          {allowed("claim") && (
+            <Button
+              disabled={disabled || !configured}
+              onClick={() => setConfirmation("claim")}
+            >
+              Claim this quest
+            </Button>
+          )}
+          {allowed("cancel") && (
+            <Button
+              variant="secondary"
+              disabled={disabled || !configured}
+              onClick={() => setConfirmation("cancel")}
+            >
+              Cancel & refund
+            </Button>
+          )}
+          {allowed("expire") && (
+            <Button
+              variant="secondary"
+              disabled={disabled || !configured}
+              onClick={() => setConfirmation("expire")}
+            >
+              Refund expired quest
+            </Button>
+          )}
+          {allowed("withdraw") && (
+            <Button
+              variant="quiet"
+              disabled={disabled || !configured}
+              onClick={() => setConfirmation("withdraw")}
+            >
+              Withdraw & refund requester
+            </Button>
+          )}
+          <p className="helper" style={{ marginTop: 24 }}>
+            Reward and requirements are fixed at funding. Only the requester
+            approves payment. Work may remain unpaid on rejection or expiry.
+          </p>
+        </>
+      }
+      confirmation={confirmationDialog}
+    />
   );
 }
 function ConfirmedFeedback({ id }: { id: string }) {
