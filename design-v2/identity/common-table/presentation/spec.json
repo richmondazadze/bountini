@@ -1,0 +1,46 @@
+{
+  "brand": "Bountini",
+  "tagline": "Small work. Shared momentum.",
+  "brief": "The Common Table: two contributions meet around one shared working surface. A non-initial symbol for clear, useful work.",
+  "adjectives": [
+    "clear",
+    "human",
+    "useful",
+    "dependable"
+  ],
+  "industry": "consumer-app",
+  "mockups": [
+    "website",
+    "app-icon",
+    "social",
+    "favicon-tab",
+    "sticker",
+    "business-card"
+  ],
+  "brand_color": "#2448e8",
+  "greyscale": false,
+  "final": true,
+  "nav": [
+    "Find a quest",
+    "How it works",
+    "Post a quest"
+  ],
+  "concepts": [
+    {
+      "name": "Common Table",
+      "symbol": "../masters/bountini-symbol.svg",
+      "lockup": "../masters/bountini-horizontal.svg",
+      "stacked": "../masters/bountini-stacked.svg",
+      "idea": "Two contributions. One common place to make progress.",
+      "rationale": [
+        "Two inward-facing pieces express participation.",
+        "A shared surface makes the idea useful and grounded.",
+        "A crisp silhouette pairs with the existing outlined wordmark."
+      ]
+    }
+  ],
+  "recommendation": "Selected direction C, refined for an application identity.",
+  "next_steps": [
+    "Integrate the approved asset kit in a separate application release."
+  ]
+}

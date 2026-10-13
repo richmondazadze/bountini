@@ -26,7 +26,7 @@ export function ProductFooter() {
               src="/brand/logos/bountini-horizontal-ink.svg"
               alt="Bountini"
               width={148}
-              height={34}
+              height={40}
             />
           </Link>
           <p>Small quests. Real rewards.</p>

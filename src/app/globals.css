@@ -65,6 +65,9 @@ a:hover {
   vertical-align: -0.125em;
   flex-shrink: 0;
 }
+[data-theme="dark"] footer img[src*="/brand/logos/"] {
+  filter: brightness(0) invert(1);
+}
 button,
 input,
 textarea,

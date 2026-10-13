@@ -39,7 +39,7 @@ export function WorkspaceHeader({
           <img
             src="/brand/logos/bountini-horizontal-ink.svg"
             width="148"
-            height="34"
+            height="40"
             alt="Bountini"
           />
         </Link>

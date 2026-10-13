@@ -10,7 +10,14 @@ export const metadata: Metadata = {
   },
   description:
     "A clear brief. One contributor. Rewards held in Solana Devnet escrow until you approve.",
-  icons: { icon: "/brand/favicon.svg", apple: "/brand/apple-touch-icon.png" },
+  icons: {
+    icon: [
+      { url: "/brand/favicon.svg?v=common-table", type: "image/svg+xml" },
+      { url: "/brand/favicon.ico?v=common-table", sizes: "any" },
+    ],
+    apple: "/brand/apple-touch-icon.png?v=common-table",
+  },
+  manifest: "/brand/site.webmanifest?v=common-table",
 };
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
