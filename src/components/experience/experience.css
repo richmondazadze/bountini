@@ -44,7 +44,7 @@
   padding: 10px;
   background: var(--surface, #fff);
   color: var(--text, #161616);
-  width: 126px;
+  width: 140px;
   cursor: pointer;
 }
 .experience-network {
@@ -163,7 +163,7 @@
     width: 130px;
   }
   .experience-header .experience-mode select {
-    width: 116px;
+    width: 130px;
   }
   .experience-mode {
     margin-left: auto;
@@ -187,7 +187,7 @@
     width: 110px;
   }
   .experience-header .experience-mode select {
-    width: 104px;
+    width: 124px;
     padding: 8px;
     font-size: 13px;
   }
