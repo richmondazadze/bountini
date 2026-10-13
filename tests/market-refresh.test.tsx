@@ -238,3 +238,36 @@ it("allows other states and restores Open quests on reset", async () => {
   await act(async () => vi.advanceTimersByTimeAsync(250));
   expect(m.api.mock.calls.at(-1)![0]).toContain("state=open");
 });
+it("applies a supported landing category on load and follows history without losing existing feed guards", async () => {
+  history.replaceState(null, "", "/discover?category=Development");
+  m.api.mockResolvedValue(page(1, 1, false));
+  await start();
+  expect(
+    new URLSearchParams(m.api.mock.calls.at(-1)![0].split("?")[1]).get(
+      "category",
+    ),
+  ).toBe("Development");
+  expect(
+    host.querySelector('.discovery-categories button[aria-pressed="true"]')
+      ?.textContent,
+  ).toBe("Development");
+  await category("Translation");
+  expect(location.search).toContain("category=Translation");
+  history.replaceState(null, "", "/discover?category=Design");
+  await act(async () => window.dispatchEvent(new PopStateEvent("popstate")));
+  await act(async () => vi.advanceTimersByTimeAsync(250));
+  expect(
+    new URLSearchParams(m.api.mock.calls.at(-1)![0].split("?")[1]).get(
+      "category",
+    ),
+  ).toBe("All categories");
+  history.replaceState(null, "", "/");
+});
+it("clears the landing category URL when resetting discovery", async () => {
+  history.replaceState(null, "", "/discover?category=Writing");
+  m.api.mockResolvedValue(page(1, 0, false));
+  await start();
+  await category("All categories");
+  expect(new URLSearchParams(location.search).has("category")).toBe(false);
+  history.replaceState(null, "", "/");
+});

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Providers } from "@/components/providers";
+import { ProductFooter } from "@/components/public-product/footer";
 import { Header } from "@/components/header";
 import "./globals.css";
 export const metadata: Metadata = {
@@ -20,16 +21,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <main id="main" tabIndex={-1}>
             {children}
           </main>
-          <footer>
-            <img
-              src="/brand/logos/bountini-symbol-ink.svg"
-              alt=""
-              width="24"
-              height="24"
-            />
-            <span>Small quests. Real rewards.</span>
-            <span>Solana Devnet · Test SOL only</span>
-          </footer>
+          <ProductFooter />
         </Providers>
       </body>
     </html>

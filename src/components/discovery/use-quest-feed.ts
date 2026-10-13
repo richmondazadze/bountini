@@ -4,6 +4,7 @@ import { useWalletConnection } from "@solana/react-hooks";
 import { useAccount } from "../account-provider";
 import type { Bounty } from "@/domain/bounty";
 import { api } from "../header";
+import { discoveryCategory } from "@/client/discovery-links";
 /** Existing live query contract; generation guards cover filters, identity and polling. */
 export function useQuestFeed({
   mine = false,
@@ -19,7 +20,31 @@ export function useQuestFeed({
   const [error, setError] = useState("");
   const [paginationError, setPaginationError] = useState(false);
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("All categories");
+  const [category, setCategoryState] = useState("All categories");
+  const setCategory = useCallback(
+    (value: string) => {
+      setCategoryState(value);
+      if (!mine && window.location.pathname === "/discover") {
+        const url = new URL(window.location.href);
+        if (value === "All categories") url.searchParams.delete("category");
+        else url.searchParams.set("category", value);
+        window.history.replaceState(
+          window.history.state,
+          "",
+          url.pathname + url.search + url.hash,
+        );
+      }
+    },
+    [mine],
+  );
+  useEffect(() => {
+    if (mine) return;
+    const sync = () =>
+      setCategoryState(discoveryCategory(window.location.search));
+    sync();
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, [mine]);
   const [view, setView] = useState(fixedRole || "All");
   const [state, setState] = useState(mine ? "All states" : "open");
   const [page, setPage] = useState(0);
