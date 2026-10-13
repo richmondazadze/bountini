@@ -44,23 +44,31 @@ export async function PATCH(
   try {
     requireOrigin(request);
     const { id } = await params;
-    const op = await owned(id, await walletSession());
+    const actor = await walletSession();
+    const op = await owned(id, actor);
     const parsed = schema.safeParse(await jsonBody(request));
     if (!parsed.success) throw new HttpError(400, "Invalid operation update");
     if (["confirmed", "failed", "rejected"].includes(op.status))
       return Response.json({ operation: op });
-    const { signature: tx, status } = parsed.data;
+    const { signature: tx } = parsed.data;
     if (op.signature && op.signature !== tx)
       throw new HttpError(409, "A submitted operation cannot be replaced");
     const sql = database();
-    if (tx)
-      await sql`UPDATE operations SET signature=${tx},status='confirming',updated_at=now() WHERE id=${id} AND signature IS NULL`;
-    else if (!op.signature && status === "rejected")
-      await sql`UPDATE operations SET status='rejected',updated_at=now() WHERE id=${id} AND signature IS NULL`;
+    const updated = tx
+      ? await sql`UPDATE operations SET signature=${tx},status='confirming',updated_at=now() WHERE id=${id} AND actor=${actor} AND signature IS NULL AND status IN ('waiting-wallet','submitting','confirming','unknown') RETURNING *`
+      : await sql`UPDATE operations SET status='rejected',updated_at=now() WHERE id=${id} AND actor=${actor} AND signature IS NULL AND status IN ('waiting-wallet','submitting','confirming','unknown') RETURNING *`;
+    // The conditional transition may lose to another signature, a rejection,
+    // or reconciliation. Return the winner, never a status from the stale read.
+    const current = updated[0] || (await owned(id, actor));
+    if (tx && current.signature && current.signature !== tx)
+      throw new HttpError(409, "A submitted operation cannot be replaced");
     return Response.json({
-      operation: tx
-        ? await reconcileOperation(id)
-        : { ...op, status: "rejected" },
+      operation:
+        tx &&
+        current.signature === tx &&
+        !["confirmed", "failed", "rejected"].includes(current.status)
+          ? await reconcileOperation(id)
+          : current,
     });
   } catch (e) {
     return failure(e);

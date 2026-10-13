@@ -56,7 +56,10 @@ export function AttachmentView({ file }: { file: Attachment }) {
       <p>
         <strong>{file.filename}</strong> · {(file.size / 1024).toFixed(1)} KiB
       </p>
-      <p className="helper address">SHA-256: {file.sha256}</p>
+      <details>
+        <summary>File integrity record</summary>
+        <p className="helper address">SHA-256: {file.sha256}</p>
+      </details>
       <Button type="button" variant="secondary" onClick={open}>
         {access ? "Refresh file access" : "Open file access"}
       </Button>
@@ -478,20 +481,34 @@ export function DeliverableEditor({
     </>
   );
 }
-export function ConfirmedDeliverables({ id }: { id: string }) {
+export function ConfirmedDeliverables({
+  id,
+  onLoaded,
+  selectVersions = false,
+}: {
+  id: string;
+  onLoaded?: (versions: ConfirmedSubmission[] | null) => void;
+  selectVersions?: boolean;
+}) {
   const [versions, setVersions] = useState<ConfirmedSubmission[] | null>(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
+  const [selected, setSelected] = useState<number | null>(null);
   useEffect(() => {
     let cancelled = false;
     setError("");
     setVersions(null);
+    onLoaded?.(null);
     api<{ submissions: ConfirmedSubmission[] }>(
       `/api/bounties/${id}/submissions`,
       { cache: "no-store" },
     )
       .then((r) => {
-        if (!cancelled) setVersions(r.submissions);
+        if (!cancelled) {
+          setVersions(r.submissions);
+          onLoaded?.(r.submissions);
+          setSelected(null);
+        }
       })
       .catch((e) => {
         if (!cancelled) setError(e.message);
@@ -499,7 +516,7 @@ export function ConfirmedDeliverables({ id }: { id: string }) {
     return () => {
       cancelled = true;
     };
-  }, [id, attempt]);
+  }, [id, attempt, onLoaded]);
   return error ? (
     <Banner error>
       {error}{" "}
@@ -512,8 +529,30 @@ export function ConfirmedDeliverables({ id }: { id: string }) {
   ) : (
     <>
       {!versions.length && <p>No confirmed deliveries yet.</p>}
+      {selectVersions && versions.length > 1 && (
+        <div
+          className="rv-versions"
+          role="group"
+          aria-label="Submission version"
+        >
+          {versions.map((s, i) => (
+            <Button
+              key={i}
+              variant="secondary"
+              aria-pressed={(selected ?? versions.length - 1) === i}
+              onClick={() => setSelected(i)}
+            >
+              {s.revision ? "Revised submission" : "Original submission"}
+            </Button>
+          ))}
+        </div>
+      )}
       {versions.map((s, i) => (
-        <section key={s.content_hash || i} className="confirmed-version">
+        <section
+          key={s.content_hash || i}
+          className="confirmed-version"
+          hidden={selectVersions && (selected ?? versions.length - 1) !== i}
+        >
           <h3>{s.revision ? "Revised submission" : "Original submission"}</h3>
           {s.manifest ? (
             <ManifestView manifest={s.manifest} />
@@ -521,9 +560,12 @@ export function ConfirmedDeliverables({ id }: { id: string }) {
             <p className="submission-text">{s.body}</p>
           )}
           {s.content_hash && (
-            <p className="helper address">
-              {s.manifest ? "Manifest" : "Text"} SHA-256: {s.content_hash}
-            </p>
+            <details>
+              <summary>Submission integrity record</summary>
+              <p className="helper address">
+                {s.manifest ? "Manifest" : "Text"} SHA-256: {s.content_hash}
+              </p>
+            </details>
           )}
         </section>
       ))}

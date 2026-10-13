@@ -615,11 +615,17 @@ export function DraftAssistant({
     </section>
   );
 }
-export function AdvisoryReview({ bountyId }: { bountyId: string }) {
+export function AdvisoryReview({
+  bountyId,
+  eligible = true,
+}: {
+  bountyId: string;
+  eligible?: boolean;
+}) {
   const walletReady = useWalletAccess();
   const { me } = useAccount();
   const { wallet } = useWalletConnection();
-  const identity = `${bountyId}:${me?.user.id}:${wallet?.account.address}:${walletReady}`;
+  const identity = `${bountyId}:${me?.user.id}:${wallet?.account.address}:${walletReady}:${eligible}`;
   const currentIdentity = useRef(identity);
   currentIdentity.current = identity;
   const generation = useRef(0);
@@ -660,7 +666,7 @@ export function AdvisoryReview({ bountyId }: { bountyId: string }) {
     };
   }, [identity]);
   async function review() {
-    if (!walletReady) return;
+    if (!walletReady || !eligible) return;
     const owner = identity,
       token = ++generation.current;
     const valid = () =>
@@ -698,11 +704,12 @@ export function AdvisoryReview({ bountyId }: { bountyId: string }) {
       <h3>Advisory review</h3>
       <p className="helper">
         Requesting feedback sends the brief, written response and supported
-        private attachments to Gemini. Link destinations are not fetched. You
-        decide approval, revision or rejection. The review deadline continues
-        while AI runs.
+        private attachments from the latest confirmed submission to Gemini.
+        Selecting an older version does not change Gemini’s input. Link
+        destinations are not fetched. You decide approval, revision or
+        rejection. The review deadline continues while AI runs.
       </p>
-      {!walletReady && (
+      {(!walletReady || !eligible) && (
         <p className="helper">
           Connect and verify your participant wallet in the header to request AI
           review.
@@ -712,7 +719,7 @@ export function AdvisoryReview({ bountyId }: { bountyId: string }) {
         type="button"
         variant="secondary"
         pending={pending}
-        disabled={!walletReady}
+        disabled={!walletReady || !eligible}
         onClick={review}
       >
         Review against checklist
@@ -722,7 +729,7 @@ export function AdvisoryReview({ bountyId }: { bountyId: string }) {
         <>
           <p>{result.summary}</p>
           <h4>Materials supplied and limitations</h4>
-          <ul>
+          <ul className="rv-materials">
             {materials.map((m, i) => (
               <li key={i}>
                 <strong>{m.label}</strong> ·{" "}
@@ -734,14 +741,17 @@ export function AdvisoryReview({ bountyId }: { bountyId: string }) {
             ))}
           </ul>
           {result.criteria.map((c, i) => (
-            <div key={i}>
+            <div key={i} className="rv-criterion">
               <h4>{c.criterion}</h4>
               <p>Evidence: {c.evidence}</p>
               <p>Concern: {c.concern}</p>
               <p>Suggested revision: {c.suggestedRevision}</p>
             </div>
           ))}
-          <p className="helper address">{trace}</p>
+          <details>
+            <summary>Advisory evidence record</summary>
+            <p className="helper address">{trace}</p>
+          </details>
         </>
       )}
     </section>

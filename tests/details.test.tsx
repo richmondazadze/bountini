@@ -703,3 +703,33 @@ it("checks persisted signature after a concurrent rejection acknowledgement befo
     JSON.parse(localStorage.getItem("bountini.operation.quest")!),
   ).toMatchObject({ status: "unknown", signature: "concurrent-signature" });
 });
+it("keeps human review and feedback after a declined requester payment signature", async () => {
+  prepareClaim();
+  mocks.actor = "requester";
+  bounty = {
+    ...bounty,
+    status: "in-review",
+    worker: "worker",
+    deadline: Math.floor(Date.now() / 1000) + 600,
+  };
+  submissions = [{ body: "Confirmed work for human review", revision: 0 }];
+  const prior = mocks.api.getMockImplementation()!;
+  mocks.api.mockImplementation((path: string, options?: RequestInit) =>
+    path === "/api/operations/op"
+      ? { operation: { status: "rejected" } }
+      : prior(path, options),
+  );
+  mocks.sign.mockRejectedValue(new Error("User rejected signature"));
+  await mount();
+  await click("Approve & pay");
+  expect(host.querySelector('[role="dialog"]')?.textContent).toContain(
+    "Release 0.001 test SOL",
+  );
+  await click("Confirm & open wallet");
+  expect(host.textContent).toContain("Confirmed work for human review");
+  expect(host.textContent).toContain("User rejected signature");
+  expect(host.textContent).not.toContain(
+    "Payment to the assigned contributor is confirmed",
+  );
+  expect(mocks.rpcSend).not.toHaveBeenCalled();
+});

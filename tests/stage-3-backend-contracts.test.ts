@@ -174,14 +174,96 @@ it("refuses replacing a persisted signature or marking it rejected", async () =>
   );
   expect(m.reconcile).not.toHaveBeenCalled();
 });
-it("reproduces a raced rejection returning rejected when a signature won the conditional update", async () => {
+it("returns the persisted signed operation when rejection loses its atomic update", async () => {
+  const winner = { id, status: "confirming", signature };
   m.sql
     .mockResolvedValueOnce([{ id, status: "waiting-wallet", signature: null }])
-    .mockResolvedValueOnce([]);
+    .mockResolvedValueOnce([])
+    .mockResolvedValueOnce([winner]);
   const r = await updateOperation(req({ status: "rejected" }), ctx);
-  // Regression evidence of an existing defect: the route does not use RETURNING
-  // or reread the row after the conditional update affected no rows.
-  expect((await r.json()).operation.status).toBe("rejected");
-  expect(m.sql.mock.calls[1][0].join("?")).toContain("signature IS NULL");
+  expect((await r.json()).operation).toEqual(winner);
+  const query = m.sql.mock.calls[1][0].join("?");
+  expect(query).toContain("signature IS NULL");
+  expect(query).toContain("status IN");
+  expect(query).toContain("RETURNING *");
+  expect(query).toContain("actor=");
+  expect(m.sql).toHaveBeenCalledTimes(3);
+});
+it("returns the actual rejection row when unsigned rejection wins", async () => {
+  const winner = {
+    id,
+    status: "rejected",
+    signature: null,
+    updated_at: "actual database timestamp",
+  };
+  m.sql
+    .mockResolvedValueOnce([{ id, status: "waiting-wallet", signature: null }])
+    .mockResolvedValueOnce([winner]);
+  expect(
+    (await (await updateOperation(req({ status: "rejected" }), ctx)).json())
+      .operation,
+  ).toEqual(winner);
   expect(m.sql).toHaveBeenCalledTimes(2);
 });
+it("does not revive a rejection that won a concurrent signature update", async () => {
+  const winner = { id, status: "rejected", signature: null };
+  m.sql
+    .mockResolvedValueOnce([{ id, status: "waiting-wallet", signature: null }])
+    .mockResolvedValueOnce([])
+    .mockResolvedValueOnce([winner]);
+  expect(
+    (await (await updateOperation(req({ signature }), ctx)).json()).operation,
+  ).toEqual(winner);
+  expect(m.reconcile).not.toHaveBeenCalled();
+});
+it("reconciles the same-signature retry after a concurrent writer wins", async () => {
+  const winner = { id, status: "confirming", signature };
+  m.sql
+    .mockResolvedValueOnce([{ id, status: "waiting-wallet", signature: null }])
+    .mockResolvedValueOnce([])
+    .mockResolvedValueOnce([winner]);
+  m.reconcile.mockResolvedValue({ ...winner, status: "unknown" });
+  expect(
+    (await (await updateOperation(req({ signature }), ctx)).json()).operation
+      .status,
+  ).toBe("unknown");
+  expect(m.reconcile).toHaveBeenCalledWith(id);
+});
+it("reconciles an already-recorded identical signature without replacing it", async () => {
+  const winner = { id, status: "confirming", signature };
+  m.sql
+    .mockResolvedValueOnce([winner])
+    .mockResolvedValueOnce([])
+    .mockResolvedValueOnce([winner]);
+  m.reconcile.mockResolvedValue({ ...winner, status: "confirmed" });
+  expect(
+    (await (await updateOperation(req({ signature }), ctx)).json()).operation
+      .status,
+  ).toBe("confirmed");
+});
+it("refuses a conflicting signature that won after the initial unsigned read", async () => {
+  m.sql
+    .mockResolvedValueOnce([{ id, status: "waiting-wallet", signature: null }])
+    .mockResolvedValueOnce([])
+    .mockResolvedValueOnce([
+      { id, status: "confirming", signature: "2".repeat(64) },
+    ]);
+  expect((await updateOperation(req({ signature }), ctx)).status).toBe(409);
+  expect(m.reconcile).not.toHaveBeenCalled();
+});
+it.each(["confirmed", "failed", "rejected"])(
+  "does not overwrite a concurrent terminal %s transition",
+  async (status) => {
+    const winner = { id, status, signature };
+    m.sql
+      .mockResolvedValueOnce([
+        { id, status: "waiting-wallet", signature: null },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([winner]);
+    expect(
+      (await (await updateOperation(req({ signature }), ctx)).json()).operation,
+    ).toEqual(winner);
+    expect(m.reconcile).not.toHaveBeenCalled();
+  },
+);

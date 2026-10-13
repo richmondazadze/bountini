@@ -3,6 +3,11 @@ import { useWalletAccess } from "./wallet-access";
 import { Workroom } from "./workroom";
 import { QuestDetails } from "./quest-details/quest-details";
 import { RequesterIdentity } from "./discovery/quest-card";
+import {
+  ReviewPanel,
+  ReviewActivity,
+  SettlementSummary,
+} from "./submission-review/review-panel";
 import { ActiveWorkroom } from "./active-workroom/active-workroom";
 import {
   DeliverableEditor,
@@ -11,7 +16,6 @@ import {
 } from "./deliverables";
 import type { FrozenSubmission } from "@/domain/deliverables";
 import { useAccount } from "./account-provider";
-import { AdvisoryReview } from "./assistance";
 import Link from "next/link";
 import { accountHref } from "@/client/account-flow";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -524,14 +528,23 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
       {confirmation === "submit" && frozen && (
         <>
           <ManifestView manifest={frozen.manifest} />
-          <p className="helper address">
-            Manifest SHA-256: {frozen.contentHash}
-          </p>
+          <details>
+            <summary>Submission integrity record</summary>
+            <p className="helper address">
+              Manifest SHA-256: {frozen.contentHash}
+            </p>
+          </details>
           <p className="helper">
             This snapshot is frozen. Choose Keep reviewing to edit and prepare a
             new snapshot. Failed signing preserves your files and draft.
           </p>
         </>
+      )}
+      {["revise", "reject"].includes(confirmation || "") && (
+        <section>
+          <h3>Your feedback</h3>
+          <p className="submission-text">{feedback}</p>
+        </section>
       )}
       {confirmation === "claim" && (
         <label className="qd-claim-consent">
@@ -715,117 +728,33 @@ function DetailsView({ id, review = false }: { id: string; review?: boolean }) {
           </>
         ),
         review: (
-          <>
-            {" "}
-            {(worker || requester) &&
-              ["in-review", "paid", "refunded", "revision-requested"].includes(
-                b.status,
-              ) && (
-                <section className="panel">
-                  <h2>Review the work</h2>
-                  <ConfirmedDeliverables
-                    key={`review:${id}:${actor}:${authVersion}:${submissionVersion}`}
-                    id={id}
-                  />
-                  <AdvisoryReview
-                    key={`advisory:${id}:${actor}:${authVersion}:${submissionVersion}`}
-                    bountyId={id}
-                  />
-                  {requester && b.status === "in-review" && (
-                    <>
-                      <div className="field">
-                        <label htmlFor="feedback">Specific feedback</label>
-                        <textarea
-                          id="feedback"
-                          value={feedback}
-                          onChange={(e) => setFeedback(e.target.value)}
-                          maxLength={20000}
-                        />
-                      </div>
-                      <div className="actions">
-                        <Button
-                          disabled={
-                            disabled || !configured || !allowed("approve")
-                          }
-                          onClick={() => setConfirmation("approve")}
-                        >
-                          Approve & pay
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          disabled={
-                            disabled ||
-                            !configured ||
-                            !allowed("revise") ||
-                            !feedback.trim()
-                          }
-                          onClick={() => setConfirmation("revise")}
-                        >
-                          Request one revision
-                        </Button>
-                        <Button
-                          variant="quiet"
-                          disabled={
-                            disabled ||
-                            !configured ||
-                            !allowed("reject") ||
-                            !feedback.trim()
-                          }
-                          onClick={() => setConfirmation("reject")}
-                        >
-                          Record rejection
-                        </Button>
-                      </div>
-                      <p className="helper" style={{ marginTop: 16 }}>
-                        Rejection records feedback. Funds stay locked until
-                        review expiry; you may still approve before then.
-                      </p>
-                    </>
-                  )}
-                  <Banner>
-                    Review is yours to make. AI feedback is advisory only.
-                  </Banner>
-                </section>
-              )}
-            {!["in-review", "revision-requested", "paid", "refunded"].includes(
-              b.status,
-            ) && <p>No confirmed delivery is available for review yet.</p>}
-          </>
+          <ReviewPanel
+            key={`review:${id}:${identity}:${submissionVersion}`}
+            b={b}
+            requester={requester}
+            worker={worker}
+            ready={Boolean(walletReady && actor === b.requester)}
+            advisoryReady={Boolean(
+              walletReady && (actor === b.requester || actor === b.worker),
+            )}
+            blocked={disabled || !configured}
+            allowed={allowed}
+            feedback={feedback}
+            setFeedback={setFeedback}
+            onAction={setConfirmation}
+            activity={activity}
+            feedbackHistory={
+              <ConfirmedFeedback
+                key={`${id}:${identity}:${feedbackVersion}`}
+                id={id}
+              />
+            }
+          />
         ),
         activity: (
           <>
-            <section>
-              <h3>Activity</h3>
-              <div className="timeline">
-                <p>
-                  Quest draft created · {new Date(b.createdAt).toLocaleString()}
-                </p>
-                {activity.map((event) => (
-                  <p key={event.signature}>
-                    <a
-                      href={`https://explorer.solana.com/tx/${event.signature}?cluster=devnet`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {event.action} · Confirmed ↗
-                    </a>
-                    <br />
-                    <span className="helper">
-                      {new Date(event.updated_at).toLocaleString()}
-                    </span>
-                  </p>
-                ))}
-                {b.signature && (
-                  <a
-                    href={`https://explorer.solana.com/tx/${b.signature}?cluster=devnet`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Verified Devnet transaction ↗
-                  </a>
-                )}
-              </div>
-            </section>
+            <SettlementSummary b={b} activity={activity} />
+            <ReviewActivity b={b} activity={activity} />
           </>
         ),
       }}
