@@ -1,4 +1,5 @@
 "use client";
+import { DiagonalArrow } from "@/components/diagonal-arrow";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Bounty, TransactionStatus, Action } from "@/domain/bounty";
@@ -303,7 +304,7 @@ export function QuestDetails({
                       target="_blank"
                       rel="noreferrer"
                     >
-                      View Devnet receipt ↗
+                      View Devnet receipt <DiagonalArrow />
                     </a>
                   )}
                 </div>
@@ -427,7 +428,7 @@ export function QuestDetails({
               </p>
               {participant && (
                 <Link href={`/bounties/${b.id}/review`}>
-                  Open authorized participant materials ↗
+                  Open authorized participant materials <DiagonalArrow />
                 </Link>
               )}
             </section>
@@ -456,7 +457,7 @@ export function QuestDetails({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  View verified Devnet transaction ↗
+                  View verified Devnet transaction <DiagonalArrow />
                 </a>
               )}
             </details>

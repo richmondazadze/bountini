@@ -1,4 +1,5 @@
 "use client";
+import { DiagonalArrow } from "@/components/diagonal-arrow";
 import {
   forwardRef,
   useEffect,
@@ -102,7 +103,7 @@ export function TransactionStatusView({
           target="_blank"
           rel="noreferrer"
         >
-          View Devnet receipt ↗
+          View Devnet receipt <DiagonalArrow />
         </a>
       )}
     </Banner>

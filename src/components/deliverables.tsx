@@ -1,4 +1,5 @@
 "use client";
+import { DiagonalArrow } from "@/components/diagonal-arrow";
 import { useEffect, useRef, useState } from "react";
 import { api } from "./header";
 import { Banner, Button } from "./ui";
@@ -68,7 +69,7 @@ export function AttachmentView({ file }: { file: Attachment }) {
         <>
           <p>
             <a href={access.downloadUrl} target="_blank" rel="noreferrer">
-              Download {file.filename} ↗
+              Download {file.filename} <DiagonalArrow />
             </a>
           </p>
           {file.contentType.startsWith("image/") && (
@@ -119,7 +120,7 @@ export function ManifestView({ manifest }: { manifest: Manifest }) {
             {manifest.links.map((l, i) => (
               <li key={i}>
                 <a href={l.url} target="_blank" rel="noreferrer">
-                  {l.label} ↗
+                  {l.label} <DiagonalArrow />
                 </a>
                 <p className="helper address">{l.url}</p>
               </li>

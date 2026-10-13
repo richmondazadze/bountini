@@ -1,4 +1,5 @@
 "use client";
+import { DiagonalArrow } from "@/components/diagonal-arrow";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 export function ProductFooter() {
@@ -46,7 +47,7 @@ export function ProductFooter() {
             target="_blank"
             rel="noreferrer"
           >
-            Project source ↗
+            Project source <DiagonalArrow />
           </a>
         </nav>
         <nav aria-label="Bountini help">

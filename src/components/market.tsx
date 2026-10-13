@@ -1,4 +1,5 @@
 "use client";
+import { DiagonalArrow } from "@/components/diagonal-arrow";
 import Link from "next/link";
 import { useAccount } from "./account-provider";
 import { useQuestFeed } from "./discovery/use-quest-feed";
@@ -176,7 +177,7 @@ export function Market({
                       {b.reward} SOL<small>Solana Devnet</small>
                     </div>
                     <Link className="button quiet" href={`/bounties/${b.id}`}>
-                      View quest ↗
+                      View quest <DiagonalArrow />
                     </Link>
                   </article>
                 ))}

@@ -1,4 +1,5 @@
 "use client";
+import { DiagonalArrow } from "@/components/diagonal-arrow";
 import { useWalletAccess } from "./wallet-access";
 import { Workroom } from "./workroom";
 import { QuestDetails } from "./quest-details/quest-details";
@@ -914,7 +915,8 @@ function ConfirmedFeedback({ id }: { id: string }) {
             target="_blank"
             rel="noreferrer"
           >
-            Confirmed · {new Date(item.confirmed_at).toLocaleString()} ↗
+            Confirmed · {new Date(item.confirmed_at).toLocaleString()}{" "}
+            <DiagonalArrow />
           </a>
         </div>
       ))}

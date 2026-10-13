@@ -1,4 +1,5 @@
 "use client";
+import { DiagonalArrow } from "@/components/diagonal-arrow";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
@@ -284,7 +285,7 @@ export function ActiveWorkroom({
           target="_blank"
           rel="noreferrer"
         >
-          View signed Devnet request ↗
+          View signed Devnet request <DiagonalArrow />
         </a>
       )}
       <nav className="aw-nav" aria-label="Workroom sections">

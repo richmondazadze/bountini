@@ -58,6 +58,13 @@ a {
 a:hover {
   text-decoration: underline;
 }
+.diagonal-arrow {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+}
 button,
 input,
 textarea,

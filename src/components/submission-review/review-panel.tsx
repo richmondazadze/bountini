@@ -1,4 +1,5 @@
 "use client";
+import { DiagonalArrow } from "@/components/diagonal-arrow";
 import { useState, type ReactNode } from "react";
 import type { Bounty, Action } from "@/domain/bounty";
 import type { ChainAction } from "@/chain/escrow";
@@ -63,7 +64,8 @@ export function SettlementSummary({
           target="_blank"
           rel="noreferrer"
         >
-          View confirmed {b.status === "paid" ? "payment" : "refund"} receipt ↗
+          View confirmed {b.status === "paid" ? "payment" : "refund"} receipt{" "}
+          <DiagonalArrow />
         </a>
       )}
       {terminal && !matching && (
@@ -110,7 +112,7 @@ export function ReviewActivity({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  View verified Devnet transaction ↗
+                  View verified Devnet transaction <DiagonalArrow />
                 </a>
                 <p className="helper address">{e.signature}</p>
               </details>

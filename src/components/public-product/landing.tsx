@@ -1,3 +1,4 @@
+import { DiagonalArrow } from "@/components/diagonal-arrow";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -73,20 +74,7 @@ export function ProductLanding() {
           <div className="pp-actions">
             <Link className="button primary large" href="/create">
               Post a quest
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="square"
-                strokeLinejoin="miter"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path d="M6 18 18 6M6 6h12v12" />
-              </svg>
+              <DiagonalArrow />
             </Link>
             <Link className="button secondary large" href="/discover">
               Find a contribution
@@ -126,7 +114,9 @@ export function ProductLanding() {
             <p className="eyebrow">Start with a specific need</p>
             <h2>What could use a hand?</h2>
           </div>
-          <Link href="/discover">Browse open quests ↗</Link>
+          <Link href="/discover">
+            Browse open quests <DiagonalArrow />
+          </Link>
         </div>
         <div className="pp-categories">
           {discoveryCategories.map((category, i) => (
@@ -141,7 +131,7 @@ export function ProductLanding() {
                 <h3>{category}</h3>
                 <p>{categories[i].body}</p>
               </div>
-              <span aria-hidden="true">↗</span>
+              <DiagonalArrow />
             </Link>
           ))}
         </div>
@@ -166,7 +156,7 @@ export function ProductLanding() {
             alt=""
           />
           <Link className="button secondary" href="/create">
-            Open the quest editor ↗
+            Open the quest editor <DiagonalArrow />
           </Link>
           <p className="helper">
             Sign in first. Recording and wallet connection are your choice; the
@@ -231,11 +221,15 @@ export function ProductLanding() {
               target="_blank"
               rel="noreferrer"
             >
-              <strong>Read the project source ↗</strong>
+              <strong>
+                Read the project source <DiagonalArrow />
+              </strong>
               <span>Public repository</span>
             </a>
             <a href={receipt} target="_blank" rel="noreferrer">
-              <strong>Inspect a Devnet approval ↗</strong>
+              <strong>
+                Inspect a Devnet approval <DiagonalArrow />
+              </strong>
               <span>Controlled test record · Test tokens only</span>
             </a>
             <a href="#faq">
@@ -266,7 +260,7 @@ export function ProductLanding() {
               event details.
             </p>
             <Link href={discoveryCategoryHref("Translation")}>
-              Explore translation ↗
+              Explore translation <DiagonalArrow />
             </Link>
           </article>
           <article>
@@ -277,7 +271,7 @@ export function ProductLanding() {
               documentation improvement.
             </p>
             <Link href={discoveryCategoryHref("Development")}>
-              Explore development ↗
+              Explore development <DiagonalArrow />
             </Link>
           </article>
         </div>
@@ -295,7 +289,9 @@ export function ProductLanding() {
           ownership, private deliverables and inspectable Devnet transactions
           keep each next step clear.
         </p>
-        <Link href="/discover">Explore the product ↗</Link>
+        <Link href="/discover">
+          Explore the product <DiagonalArrow />
+        </Link>
       </section>
       <section className="pp-container pp-section pp-faq" id="faq">
         <div>

@@ -1,3 +1,4 @@
+import { DiagonalArrow } from "@/components/diagonal-arrow";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { database } from "@/server/db";
@@ -38,7 +39,7 @@ export default async function Page({
           target="_blank"
           rel="noreferrer"
         >
-          View portfolio ↗
+          View portfolio <DiagonalArrow />
         </a>
       )}
       <p className="helper">
