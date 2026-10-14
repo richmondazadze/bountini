@@ -8,7 +8,7 @@ import {
   type ButtonHTMLAttributes,
   type ReactNode,
 } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import type { BountyStatus, TransactionStatus } from "@/domain/bounty";
 export const Button = forwardRef<
   HTMLButtonElement,
@@ -37,6 +37,7 @@ export const Button = forwardRef<
       aria-busy={pending || undefined}
       {...props}
     >
+      {pending && <span className="button-spinner" aria-hidden="true" />}
       {children}
     </button>
   ),
@@ -89,37 +90,62 @@ export function TransactionStatusView({
   signature?: string;
 }) {
   return (
-    <Banner>
-      <strong>Transaction: {status.replaceAll("-", " ")}</strong>
-      {status === "unknown" && (
-        <p>
-          Check this transaction before trying again. Funds have not been
-          verified.
-        </p>
-      )}
-      {signature && (
-        <a
-          href={`https://explorer.solana.com/tx/${signature}?cluster=devnet`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          View Devnet receipt <DiagonalArrow />
-        </a>
-      )}
-    </Banner>
+    <div
+      className="banner transaction-feedback"
+      data-status={status}
+      role="status"
+    >
+      <span className="transaction-symbol" aria-hidden="true">
+        <Icon
+          name={
+            status === "confirmed"
+              ? "check"
+              : status === "failed" ||
+                  status === "rejected" ||
+                  status === "unknown"
+                ? "warning"
+                : "wallet"
+          }
+        />
+      </span>
+      <div>
+        <strong>
+          {
+            (
+              {
+                "waiting-wallet": "Review the request in your wallet",
+                submitting: "Sending your signed request",
+                confirming: "Waiting for network confirmation",
+                confirmed: "Request confirmed",
+                rejected: "Signing was declined",
+                failed: "The request did not complete",
+                unknown: "Confirmation needs checking",
+              } as const
+            )[status]
+          }
+        </strong>
+        {status === "unknown" && (
+          <p>
+            Check this transaction before trying again. Funds have not been
+            verified.
+          </p>
+        )}
+        {signature && (
+          <a
+            href={`https://explorer.solana.com/tx/${signature}?cluster=devnet`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            View Devnet receipt <DiagonalArrow />
+          </a>
+        )}
+      </div>
+    </div>
   );
 }
 export function Enter({ children }: { children: ReactNode }) {
-  const reduced = useReducedMotion();
-  return (
-    <motion.div
-      initial={reduced ? false : { opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.24, ease: [0.2, 0, 0, 1] }}
-    >
-      {children}
-    </motion.div>
-  );
+  // CSS starting-style keeps content immediately present, with a modest first-paint transition.
+  return <div className="motion-enter">{children}</div>;
 }
 export function Dialog({
   open,
@@ -176,7 +202,7 @@ export function Dialog({
           <Icon name="close" />
         </Button>
       </div>
-      {children}
+      <div className="dialog-content">{children}</div>
     </dialog>
   );
 }

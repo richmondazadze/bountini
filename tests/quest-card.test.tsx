@@ -3,21 +3,6 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { beforeEach, afterEach, it, expect, vi } from "vitest";
 import type { Bounty } from "../src/domain/bounty";
-const motionState = vi.hoisted(() => ({
-  reduced: false,
-  hover: undefined as unknown,
-  initial: undefined as unknown,
-}));
-vi.mock("motion/react", () => ({
-  useReducedMotion: () => motionState.reduced,
-  motion: {
-    article: ({ children, whileHover, transition, initial, ...props }: any) => {
-      motionState.hover = whileHover;
-      motionState.initial = initial;
-      return <article {...props}>{children}</article>;
-    },
-  },
-}));
 import { QuestCard } from "../src/components/discovery/quest-card";
 let root: Root, host: HTMLDivElement;
 const bounty = {
@@ -39,7 +24,6 @@ beforeEach(() => {
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
-  motionState.reduced = false;
 });
 afterEach(async () => {
   await act(async () => root.unmount());
@@ -58,7 +42,7 @@ it("uses provided identity and values, keeps the full title and adds no unsuppor
   expect(host.querySelector("a")?.getAttribute("href")).toBe(
     "/bounties/real-record",
   );
-  expect(motionState.initial).toBe(false);
+  expect(host.querySelector("article")?.style.opacity).not.toBe("0");
 });
 it("uses an address fallback without inventing a name and displays the actual active deadline", async () => {
   const deadline = 1900000000;
@@ -82,10 +66,9 @@ it("uses an address fallback without inventing a name and displays the actual ac
     new Date(deadline * 1000).toISOString(),
   );
 });
-it("disables hover movement for reduced motion and never delays content with an entrance animation", async () => {
-  motionState.reduced = true;
+it("renders readable content without JavaScript-driven hover or hidden entrance styles", async () => {
   await act(async () => root.render(<QuestCard bounty={bounty} />));
-  expect(motionState.hover).toBeUndefined();
-  expect(motionState.initial).toBe(false);
+  expect(host.querySelector("article")?.style.transform).toBe("");
+  expect(host.querySelector("article")?.style.opacity).not.toBe("0");
   expect(host.querySelector("h3")?.textContent).toBe(bounty.title);
 });

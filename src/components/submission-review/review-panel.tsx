@@ -42,7 +42,11 @@ export function SettlementSummary({
     )
     .at(-1);
   return (
-    <section className="rv-settlement" aria-label="Reward and settlement">
+    <section
+      className="rv-settlement"
+      aria-label="Reward and settlement"
+      data-status={b.status}
+    >
       <p className="eyebrow">Reward and settlement</p>
       <h3>{b.reward} test SOL</h3>
       <p>

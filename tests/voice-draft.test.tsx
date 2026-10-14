@@ -503,8 +503,8 @@ it("drives the mic from real input/output levels and stops sampling when muted",
   });
   const visual = host.querySelector(".voice-visual") as HTMLElement;
   expect(
-    Number(visual.style.getPropertyValue("--voice-level")),
-  ).toBeGreaterThan(0);
+    Number(visual.querySelector<HTMLElement>(".voice-halo")!.style.opacity),
+  ).toBeGreaterThan(0.5);
   expect(active.getInputVolume).toHaveBeenCalled();
   await act(async () => options.onModeChange({ mode: "speaking" }));
   await act(async () => {
@@ -517,5 +517,7 @@ it("drives the mic from real input/output levels and stops sampling when muted",
     await vi.advanceTimersByTimeAsync(120);
   });
   expect(active.getOutputVolume).toHaveBeenCalledTimes(calls);
-  expect(visual.style.getPropertyValue("--voice-level")).toBe("0");
+  expect(
+    visual.querySelector<HTMLElement>(".voice-halo")!.style.transform,
+  ).toBe("");
 });

@@ -28,13 +28,44 @@ export function VoiceStage({
   useEffect(() => {
     const node = visual.current;
     if (!node) return;
-    node.style.setProperty("--voice-level", "0");
+    const halo = node.querySelector<HTMLElement>(".voice-halo");
+    const mic = node.querySelector<HTMLElement>(".voice-mic");
+    const bars = Array.from(
+      node.querySelectorAll<HTMLElement>(".voice-wave i"),
+    );
+    // Write only to the animated nodes; no inherited variable or React render per sample.
+    const draw = (level: number) => {
+      if (halo) {
+        halo.style.transform = `scale(${1 + level * 0.22})`;
+        halo.style.opacity = String(0.5 + level * 0.5);
+      }
+      if (mic)
+        mic.style.transform = `perspective(600px) rotateY(-14deg) rotateX(5deg) translateY(${-level * 4}px)`;
+      bars.forEach((bar, index) => {
+        bar.style.transform = `scaleY(${0.3 + level * (1 + (index % 3) * 0.2)})`;
+        bar.style.opacity = String(0.25 + level * 0.75);
+      });
+    };
+    const reset = () => {
+      [halo, mic, ...bars].forEach((el) => {
+        if (el) {
+          el.style.removeProperty("transform");
+          el.style.removeProperty("opacity");
+        }
+      });
+    };
+    reset();
     if (state !== "listening" && state !== "speaking") return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     let level = 0;
     const timer = window.setInterval(() => {
-      if (reduced.matches) {
-        node.style.setProperty("--voice-level", "0");
+      if (
+        reduced.matches ||
+        document.visibilityState === "hidden" ||
+        node.closest(".voice-stage")?.getAttribute("data-motion-in-view") ===
+          "false"
+      ) {
+        reset();
         return;
       }
       const audio = source.current();
@@ -47,11 +78,11 @@ export function VoiceStage({
           ? Math.min(1, Math.max(0, raw) * 3)
           : 0;
       level += (target - level) * 0.4;
-      node.style.setProperty("--voice-level", level.toFixed(3));
+      draw(level);
     }, 60);
     return () => {
       window.clearInterval(timer);
-      node.style.setProperty("--voice-level", "0");
+      reset();
     };
   }, [state]);
   const labels = {

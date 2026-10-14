@@ -367,7 +367,7 @@ export function DraftAssistant({
     await generate(token, current.current.identity, false, voice);
   }
   return (
-    <section className="panel" style={{ marginBottom: 24 }}>
+    <section className="panel assistant-panel" data-phase={phase}>
       <h3>Build a clearer brief</h3>
       <p className="helper">
         Optional assistance. Sign in, then connect and verify your wallet. Voice
@@ -581,7 +581,7 @@ export function DraftAssistant({
           " AI assistance is not configured. Use the manual form below."}
       </p>
       {proposal && (
-        <div style={{ marginTop: 24 }}>
+        <div className="assistant-proposal">
           <h3>{proposal.title}</h3>
           <p className="submission-text">{proposal.description}</p>
           {proposal.reward && (

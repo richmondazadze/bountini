@@ -3,6 +3,7 @@ import { Providers } from "@/components/providers";
 import { ProductFooter } from "@/components/public-product/footer";
 import { Header } from "@/components/header";
 import "./globals.css";
+import "./frontend-polish.css";
 export const metadata: Metadata = {
   title: {
     default: "Bountini — Small quests. Real rewards.",

@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import { motion, useReducedMotion } from "motion/react";
 import { WINDOWS, type Bounty, type BountyStatus } from "@/domain/bounty";
 import { StatusPill, ExperienceIcon } from "../experience/primitives";
 const statusLabels: Record<BountyStatus, string> = {
@@ -39,19 +38,12 @@ export function RequesterIdentity({ bounty: b }: { bounty: Bounty }) {
   );
 }
 export function QuestCard({ bounty: b }: { bounty: Bounty }) {
-  const reduced = useReducedMotion();
   const deadline =
     b.deadline && !["open", "paid", "refunded", "draft"].includes(b.status)
       ? new Date(b.deadline * 1000)
       : null;
   return (
-    <motion.article
-      className="discovery-quest"
-      data-component="QuestCard"
-      initial={false}
-      whileHover={reduced ? undefined : { y: -2 }}
-      transition={{ duration: 0.16 }}
-    >
+    <article className="discovery-quest" data-component="QuestCard">
       <div className="discovery-card-top">
         <RequesterIdentity bounty={b} />
         <StatusPill
@@ -122,6 +114,6 @@ export function QuestCard({ bounty: b }: { bounty: Bounty }) {
           View quest <ExperienceIcon name="arrow" />
         </Link>
       </div>
-    </motion.article>
+    </article>
   );
 }

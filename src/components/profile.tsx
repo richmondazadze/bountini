@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, type FormEvent } from "react";
+import { AccountContext } from "./account-context";
 import Link from "next/link";
 import { useAccount } from "./account-provider";
 import { authClient } from "@/client/account";
@@ -62,7 +63,8 @@ export function Profile() {
       </div>
     );
   return (
-    <div className="page account-page">
+    <div className="page account-page account-composition">
+      <AccountContext profile />
       <p className="eyebrow">Account & profile</p>
       <h1>Make yourself known.</h1>
       <p className="helper">

@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
-import { useState, type ReactNode, type Ref } from "react";
-import { Button, Dialog } from "@/components/ui";
+import { useEffect, useState, type ReactNode, type Ref } from "react";
+import { Button } from "@/components/ui";
 import "./experience.css";
+import { MenuDrawer } from "./menu-drawer";
 export type WorkspaceMode = "requester" | "worker";
 export type WorkspaceLink = { href: string; label: string; active?: boolean };
 /** Controlled shell: parent owns account role persistence and permission checks. */
@@ -13,6 +14,7 @@ export function WorkspaceHeader({
   homeHref = "/",
   accountContent,
   pending = false,
+  accountLoading = false,
   publicAccountContent,
   menuButtonRef,
 }: {
@@ -24,8 +26,12 @@ export function WorkspaceHeader({
   publicAccountContent?: ReactNode;
   menuButtonRef?: Ref<HTMLButtonElement>;
   pending?: boolean;
+  accountLoading?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (accountLoading) setOpen(false);
+  }, [accountLoading]);
   return (
     <>
       <header
@@ -82,15 +88,21 @@ export function WorkspaceHeader({
           className="experience-menu-button"
           aria-haspopup="dialog"
           variant="quiet"
-          aria-label={mode ? "Open workspace menu" : "Open public menu"}
+          aria-label={
+            accountLoading
+              ? "Checking your account"
+              : mode
+                ? "Open workspace menu"
+                : "Open public menu"
+          }
+          disabled={accountLoading}
           aria-expanded={open}
           onClick={() => setOpen(true)}
         >
           <img src="/brand/icons/menu.svg" width="20" height="20" alt="" />
         </Button>
       </header>
-      <Dialog
-        containFocus
+      <MenuDrawer
         open={open}
         onClose={() => setOpen(false)}
         title={
@@ -117,7 +129,7 @@ export function WorkspaceHeader({
         <p className="experience-menu-network">
           Solana Devnet · Test SOL has no cash value.
         </p>
-      </Dialog>
+      </MenuDrawer>
     </>
   );
 }

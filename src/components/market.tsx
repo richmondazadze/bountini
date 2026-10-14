@@ -1,10 +1,11 @@
 "use client";
-import { DiagonalArrow } from "@/components/diagonal-arrow";
+import { QuestCard } from "./discovery/quest-card";
+import "./discovery/discovery.css";
 import Link from "next/link";
 import { useAccount } from "./account-provider";
 import { useQuestFeed } from "./discovery/use-quest-feed";
 import { Discovery } from "./discovery/discovery";
-import { Badge, Banner, Button, Enter, Icon } from "./ui";
+import { Banner, Button, Enter, Icon } from "./ui";
 export function Market({
   mine = false,
   fixedRole,
@@ -36,7 +37,7 @@ export function Market({
   if (!mine) return <Discovery feed={feed} />;
   return (
     <Enter>
-      <div className="page">
+      <div className="page dashboard-market">
         <div className="page-heading">
           <div>
             <p className="eyebrow">
@@ -122,7 +123,21 @@ export function Market({
                     "paid",
                     "refunded",
                   ].map((s) => (
-                    <option key={s}>{s}</option>
+                    <option key={s} value={s}>
+                      {
+                        (
+                          {
+                            "All states": "All states",
+                            open: "Open quests",
+                            "in-progress": "In progress",
+                            "in-review": "In review",
+                            "revision-requested": "Revision requested",
+                            paid: "Payment confirmed",
+                            refunded: "Refund confirmed",
+                          } as Record<string, string>
+                        )[s]
+                      }
+                    </option>
                   ))}
                 </select>
               </div>
@@ -157,29 +172,9 @@ export function Market({
                 Loading quests…
               </p>
             ) : visible.length ? (
-              <div className="quest-list">
+              <div className="dashboard-quest-grid">
                 {visible.map((b) => (
-                  <article className="quest-row" key={b.id}>
-                    <div>
-                      <h3>
-                        <Link href={`/bounties/${b.id}`}>{b.title}</Link>
-                      </h3>
-                      <div className="quest-meta">
-                        <Badge status={b.status} />
-                        {b.requesterName && (
-                          <span>Posted by {b.requesterName}</span>
-                        )}
-                        <span>{b.category}</span>
-                        <span>30-minute delivery</span>
-                      </div>
-                    </div>
-                    <div className="reward">
-                      {b.reward} SOL<small>Solana Devnet</small>
-                    </div>
-                    <Link className="button quiet" href={`/bounties/${b.id}`}>
-                      View quest <DiagonalArrow />
-                    </Link>
-                  </article>
+                  <QuestCard key={b.id} bounty={b} />
                 ))}
               </div>
             ) : (

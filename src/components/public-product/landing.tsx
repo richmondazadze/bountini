@@ -5,6 +5,7 @@ import {
   discoveryCategories,
   discoveryCategoryHref,
 } from "@/client/discovery-links";
+import { BriefExample } from "./brief-example";
 import { RoleWorkflow } from "./workflow";
 import "./public-product.css";
 const receipt =
@@ -63,7 +64,7 @@ export function ProductLanding() {
         <div>
           <p className="eyebrow">A clear brief. A useful contribution.</p>
           <h1>
-            Small work.
+            <span className="pp-headline-main">Small work.</span>
             <br />
             <em>Shared momentum.</em>
           </h1>
@@ -95,7 +96,13 @@ export function ProductLanding() {
             fetchPriority="high"
           />
           <div className="pp-product-note">
-            <span className="pp-step">01</span>
+            <img
+              className="pp-note-symbol"
+              src="/brand/logos/bountini-symbol-cobalt.svg"
+              width="32"
+              height="32"
+              alt=""
+            />
             <div>
               <p className="eyebrow">An illustration of useful work</p>
               <strong>A welcoming invitation, translated.</strong>
@@ -166,27 +173,7 @@ export function ProductLanding() {
         <div className="pp-voice-example">
           <p className="eyebrow">Illustrative example · No recording</p>
           <h3>One idea. A clearer brief.</h3>
-          <details>
-            <summary>Explore a voice-to-brief example</summary>
-            <div>
-              <h4>A possible request</h4>
-              <p>
-                “Help me translate our neighborhood workshop invitation. Keep
-                the date and location, make the Spanish welcoming, and provide
-                editable text.”
-              </p>
-              <h4>A possible brief</h4>
-              <p>
-                Translate the supplied invitation into welcoming, neutral
-                Spanish.
-              </p>
-              <ul>
-                <li>Preserve the date, location and links.</li>
-                <li>Use natural, welcoming language.</li>
-                <li>Deliver editable written copy.</li>
-              </ul>
-            </div>
-          </details>
+          <BriefExample />
           <p className="helper">
             This illustration does not use your microphone, generate or save a
             quest, or make a payment.

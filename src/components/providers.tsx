@@ -2,6 +2,8 @@
 import { useState, type ReactNode } from "react";
 import { createBountiniClient } from "@/client/wallet";
 import { SolanaProvider } from "@solana/react-hooks";
+import { ExpressiveMotion } from "./motion-system/expressive-motion";
+import { MotionSystem } from "./motion-system/motion-system";
 import { AccountProvider } from "./account-provider";
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(() => createBountiniClient());
@@ -9,7 +11,12 @@ export function Providers({ children }: { children: ReactNode }) {
   // false. Disable persistence so wallets open only after an explicit action.
   return (
     <SolanaProvider client={client} walletPersistence={false}>
-      <AccountProvider>{children}</AccountProvider>
+      <AccountProvider>
+        <MotionSystem>
+          <ExpressiveMotion />
+          {children}
+        </MotionSystem>
+      </AccountProvider>
     </SolanaProvider>
   );
 }

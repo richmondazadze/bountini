@@ -79,6 +79,9 @@ export function Discovery({ feed }: { feed: QuestFeed }) {
             maxLength={100}
           />
         </LabeledField>
+        <span className="discovery-search-icon" aria-hidden="true">
+          <ExperienceIcon name="search" />
+        </span>
         <Button
           className="discovery-filter-trigger"
           variant="secondary"
@@ -152,6 +155,7 @@ export function Discovery({ feed }: { feed: QuestFeed }) {
                 <section
                   aria-label="Quest results"
                   className="discovery-results"
+                  aria-busy={morePending || undefined}
                 >
                   {bounties.map((b) => (
                     <QuestCard key={b.id} bounty={b} />

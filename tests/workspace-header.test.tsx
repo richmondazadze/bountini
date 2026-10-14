@@ -16,6 +16,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   host.remove();
+  delete document.documentElement.dataset.input;
   vi.restoreAllMocks();
 });
 it("contains menu keyboard focus and closes when a navigation link is selected", async () => {
@@ -31,6 +32,7 @@ it("contains menu keyboard focus and closes when a navigation link is selected",
       />,
     ),
   );
+  document.documentElement.dataset.input = "keyboard";
   const trigger = host.querySelector<HTMLButtonElement>("header button")!;
   await act(async () => trigger.click());
   const dialog = host.querySelector("dialog")!;
@@ -79,4 +81,45 @@ it("renders a public menu without exposing authenticated mode controls", async (
     host.querySelector<HTMLButtonElement>("header button")!.click(),
   );
   expect(host.querySelector("dialog h2")?.textContent).toBe("Bountini menu");
+});
+it.each(["requester", "worker"] as const)(
+  "keeps the %s menu role controlled and never connects a wallet on open",
+  async (mode) => {
+    const change = vi.fn(),
+      wallet = vi.fn();
+    window.addEventListener("bountini-open-wallet", wallet);
+    document.documentElement.dataset.input = "keyboard";
+    await act(async () =>
+      root.render(
+        <WorkspaceHeader
+          mode={mode}
+          pending
+          links={[
+            { href: "/my", label: mode === "worker" ? "My work" : "My quests" },
+          ]}
+          onModeChange={change}
+        />,
+      ),
+    );
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>("header button")!.click(),
+    );
+    expect(host.querySelector("dialog h2")?.textContent).toContain(
+      mode === "worker" ? "Worker" : "Requester",
+    );
+    expect(host.querySelector("select")?.disabled).toBe(true);
+    expect(change).not.toHaveBeenCalled();
+    expect(wallet).not.toHaveBeenCalled();
+    window.removeEventListener("bountini-open-wallet", wallet);
+  },
+);
+it("does not open or flash a guest menu while account identity is loading", async () => {
+  await act(async () =>
+    root.render(<WorkspaceHeader accountLoading links={[]} />),
+  );
+  const trigger = host.querySelector<HTMLButtonElement>("header button")!;
+  expect(trigger.disabled).toBe(true);
+  expect(trigger.getAttribute("aria-label")).toBe("Checking your account");
+  await act(async () => trigger.click());
+  expect(host.querySelector("dialog")!.open).toBe(false);
 });

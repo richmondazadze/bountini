@@ -141,23 +141,26 @@ export function Header() {
         menuButtonRef={menuButton}
         mode={me && !loading ? me.profile.activeRole : undefined}
         pending={rolePending}
+        accountLoading={loading}
         onModeChange={(role) => void switchRole(role)}
-        links={(me && !loading
-          ? me.profile.activeRole === "worker"
-            ? [
-                ["/discover", "Find quests"],
-                ["/my", "My work"],
-              ]
+        links={(loading
+          ? []
+          : me && !loading
+            ? me.profile.activeRole === "worker"
+              ? [
+                  ["/discover", "Find quests"],
+                  ["/my", "My work"],
+                ]
+              : [
+                  ["/my", "My quests"],
+                  ["/create", "Create a quest"],
+                  ["/discover", "Discover"],
+                ]
             : [
-                ["/my", "My quests"],
-                ["/create", "Create a quest"],
-                ["/discover", "Discover"],
+                ["/discover", "Find a quest"],
+                ["/#how-it-works", "How it works"],
+                ["/create", "Post a quest"],
               ]
-          : [
-              ["/discover", "Find a quest"],
-              ["/#how-it-works", "How it works"],
-              ["/create", "Post a quest"],
-            ]
         ).map(([href, label]) => ({ href, label, active: path === href }))}
         publicAccountContent={!me || loading ? <AccountNav /> : undefined}
         accountContent={(closeMenu) => (

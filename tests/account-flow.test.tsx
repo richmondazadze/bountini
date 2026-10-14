@@ -154,3 +154,30 @@ it("keeps the quest editor usable when browser storage is blocked", async () => 
     blocked.mockRestore();
   }
 });
+
+it("retains the editable brief through review and remounts without carrying it into another account", async () => {
+  m.me = { user: { id: "draft-owner" }, wallets: [] };
+  await act(async () => root.render(<Create />));
+  const click = async (name: string) =>
+    act(async () =>
+      [...host.querySelectorAll("button")]
+        .find((b) => b.textContent?.trim() === name)!
+        .click(),
+    );
+  await click("Use translation example");
+  const title = (host.querySelector("#title") as HTMLInputElement).value;
+  await click("Review requirements");
+  const save = [...host.querySelectorAll("button")].find(
+    (b) => b.textContent === "Save & continue to funding",
+  )!;
+  expect(save.disabled).toBe(true);
+  await click("Edit requirements");
+  expect((host.querySelector("#title") as HTMLInputElement).value).toBe(title);
+  await act(async () => root.render(null));
+  m.me = { user: { id: "different-account" }, wallets: [] };
+  await act(async () => root.render(<Create />));
+  expect((host.querySelector("#title") as HTMLInputElement).value).toBe("");
+  m.me = { user: { id: "draft-owner" }, wallets: [] };
+  await act(async () => root.render(<Create />));
+  expect((host.querySelector("#title") as HTMLInputElement).value).toBe(title);
+});

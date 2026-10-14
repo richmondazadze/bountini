@@ -78,7 +78,7 @@ export function Dashboard() {
   const role = me.profile.activeRole;
   return (
     <>
-      <div className="page">
+      <div className="page dashboard-page">
         <p className="eyebrow">
           Your {role === "requester" ? "Requester" : "Worker"} dashboard
         </p>
@@ -118,7 +118,7 @@ export function Dashboard() {
             prove ownership of their wallet.
           </Banner>
         )}
-        <section aria-label="Notifications">
+        <section className="dashboard-updates" aria-label="Notifications">
           <h2>Updates {unread > 0 && `(${unread} unread)`}</h2>
           {notifications.length ? (
             <>

@@ -157,7 +157,7 @@ function CreateForm() {
   }
   return (
     <Enter>
-      <div className="page">
+      <div className="page create-page">
         <div className="page-heading">
           <div>
             <p className="eyebrow">
@@ -183,6 +183,17 @@ function CreateForm() {
               <Banner>
                 Use “Connect wallet” in the header, then sign the ownership
                 message before saving your quest. No SOL is charged for linking.
+                <div className="actions">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() =>
+                      window.dispatchEvent(new Event("bountini-open-wallet"))
+                    }
+                  >
+                    Connect wallet
+                  </Button>
+                </div>
               </Banner>
             )}
             {error && <Banner error>{error}</Banner>}
@@ -264,21 +275,27 @@ function CreateForm() {
                     Use translation example
                   </Button>
                 </div>
-                <DraftAssistant
-                  draft={draft}
-                  getDraftRevision={() => draftRevision.current}
-                  onApply={(proposal) => {
-                    setDraft((d) => ({
-                      ...d,
-                      ...proposal,
-                      reward: d.reward.trim()
-                        ? d.reward
-                        : (proposal.reward ?? d.reward),
-                    }));
-                    setAgree(false);
-                  }}
-                />
-                <div className="field">
+                <nav className="create-methods" aria-label="Briefing methods">
+                  <a href="#brief-assistant">Talk or type with assistance</a>
+                  <a href="#manual-brief">Write the brief manually</a>
+                </nav>
+                <div id="brief-assistant">
+                  <DraftAssistant
+                    draft={draft}
+                    getDraftRevision={() => draftRevision.current}
+                    onApply={(proposal) => {
+                      setDraft((d) => ({
+                        ...d,
+                        ...proposal,
+                        reward: d.reward.trim()
+                          ? d.reward
+                          : (proposal.reward ?? d.reward),
+                      }));
+                      setAgree(false);
+                    }}
+                  />
+                </div>
+                <div className="field" id="manual-brief">
                   <label htmlFor="title">Quest title</label>
                   <input
                     id="title"

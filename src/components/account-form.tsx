@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { AccountContext } from "./account-context";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/client/account";
@@ -133,7 +134,8 @@ export function AccountForm({
       </div>
     );
   return (
-    <div className="page account-page">
+    <div className="page account-page account-composition">
+      <AccountContext />
       <p className="eyebrow">One account. Two ways to contribute.</p>
       <h1>
         {resetToken

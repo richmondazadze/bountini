@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Badge, Banner, Button, Dialog } from "@/components/ui";
+import { MotionShowcase } from "@/components/design-system/motion-showcase";
 import { statuses } from "@/domain/bounty";
 export default function Gallery() {
   const [dark, setDark] = useState(false);
@@ -8,6 +9,7 @@ export default function Gallery() {
   return (
     <div data-theme={dark ? "dark" : "light"} className="page">
       <h1>Component system</h1>
+      <MotionShowcase />
       <label className="switch-row">
         <input
           className="switch"

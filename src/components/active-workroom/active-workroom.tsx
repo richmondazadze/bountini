@@ -1,8 +1,13 @@
 "use client";
 import { DiagonalArrow } from "@/components/diagonal-arrow";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
-import { motion, useReducedMotion } from "motion/react";
 import type { Bounty, TransactionStatus } from "@/domain/bounty";
 import { Banner, Button, Countdown } from "../ui";
 import { StatusPill } from "../experience/primitives";
@@ -164,7 +169,6 @@ export function ActiveWorkroom({
 }) {
   const [section, setSection] = useState<WorkroomSection>("overview");
   const heading = useRef<HTMLHeadingElement>(null);
-  const reduced = useReducedMotion();
   useEffect(() => {
     const sync = () => setSection(readWorkroomSection(window.location.hash));
     sync();
@@ -175,6 +179,44 @@ export function ActiveWorkroom({
       window.removeEventListener("popstate", sync);
     };
   }, [b.id]);
+  const navRef = useRef<HTMLElement>(null);
+  const indicatorRef = useRef<HTMLSpanElement>(null);
+  const indicatorAnimation = useRef<Animation | undefined>(undefined);
+  useEffect(() => () => indicatorAnimation.current?.cancel(), []);
+  useLayoutEffect(() => {
+    const nav = navRef.current,
+      line = indicatorRef.current;
+    if (!nav || !line) return;
+    const update = (animate = false) => {
+      const selected = nav.querySelector<HTMLElement>("a[aria-current]");
+      if (!selected) return;
+      const previous = getComputedStyle(line).transform;
+      indicatorAnimation.current?.cancel();
+      const target = `translateX(${selected.offsetLeft}px) scaleX(${selected.offsetWidth})`;
+      const hasPrevious = Boolean(line.style.transform);
+      line.style.transform = target;
+      if (
+        animate &&
+        hasPrevious &&
+        line.animate &&
+        document.documentElement.dataset.input !== "keyboard" &&
+        !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+      ) {
+        indicatorAnimation.current = line.animate(
+          [{ transform: previous }, { transform: target }],
+          { duration: 180, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
+        );
+        void indicatorAnimation.current.finished.catch(() => {});
+      }
+    };
+    update(true);
+    const resize = () => update();
+    window.addEventListener("resize", resize);
+    return () => {
+      window.removeEventListener("resize", resize);
+      indicatorAnimation.current?.cancel();
+    };
+  }, [section]);
   function navigate(value: WorkroomSection, focus = false) {
     window.history.pushState(null, "", `#${value}`);
     setSection(value);
@@ -216,7 +258,15 @@ export function ActiveWorkroom({
         <div>
           <p className="eyebrow">Quest workspace · {b.category}</p>
           <h1>{b.title}</h1>
-          <StatusPill>
+          <StatusPill
+            tone={
+              b.status === "paid" || b.status === "open"
+                ? "success"
+                : b.status === "refunded" || b.status === "revision-requested"
+                  ? "warning"
+                  : "neutral"
+            }
+          >
             {b.status === "paid"
               ? "Payment confirmed"
               : b.status === "refunded"
@@ -250,7 +300,11 @@ export function ActiveWorkroom({
           </Button>
         </Banner>
       )}
-      <section className="aw-next" aria-label="Your next action">
+      <section
+        className="aw-next"
+        aria-label="Your next action"
+        data-state={operation?.status || b.status}
+      >
         <div>
           <p className="eyebrow">Your next step</p>
           <h2>{model.title}</h2>
@@ -288,7 +342,7 @@ export function ActiveWorkroom({
           View signed Devnet request <DiagonalArrow />
         </a>
       )}
-      <nav className="aw-nav" aria-label="Workroom sections">
+      <nav ref={navRef} className="aw-nav" aria-label="Workroom sections">
         {workroomSections.map((value) => (
           <a
             key={value}
@@ -308,15 +362,13 @@ export function ActiveWorkroom({
             }}
           >
             {value[0].toUpperCase() + value.slice(1)}
-            {section === value && (
-              <motion.span
-                className="aw-nav-line"
-                layoutId="workroom-section-line"
-                transition={{ duration: reduced ? 0 : 0.16 }}
-              />
-            )}
           </a>
         ))}
+        <span
+          ref={indicatorRef}
+          className="aw-moving-indicator"
+          aria-hidden="true"
+        />
       </nav>
       <div className="aw-grid">
         <div className="aw-content">

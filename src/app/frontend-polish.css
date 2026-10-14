@@ -1,0 +1,1977 @@
+/* Common Table / editorial marketing, focused workspace. Brand tokens unchanged. */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --motion-press: 120ms;
+  --motion-feedback: 160ms;
+  --motion-panel: 220ms;
+  --motion-exit: 140ms;
+  --surface-shadow: 0 8px 24px color-mix(in srgb, var(--text) 6%, transparent);
+  --surface-raised: 0 20px 56px color-mix(in srgb, var(--text) 9%, transparent);
+}
+body {
+  background: var(--surface);
+}
+body h1,
+body h2,
+body h3 {
+  text-wrap: balance;
+}
+body p {
+  text-wrap: pretty;
+}
+body main {
+  min-height: 65dvh;
+}
+body main > .page,
+body .discovery-page,
+body .qd-page,
+body .aw-page {
+  padding-top: 40px;
+}
+body .eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  font-weight: 600;
+}
+body .page h1 {
+  font-size: clamp(34px, 3.4vw, 48px);
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+}
+body .address {
+  font-variant-numeric: tabular-nums;
+}
+body .experience-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--text) 3%, transparent);
+}
+body .experience-header .experience-mode select {
+  background-color: var(--subtle);
+  border-color: var(--control);
+}
+body .experience-desktop-nav > a {
+  position: relative;
+}
+body .experience-desktop-nav > a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--action);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--motion-feedback) var(--ease-out);
+}
+body .experience-desktop-nav > a[aria-current]::after {
+  transform: scaleX(1);
+}
+body .experience-header .experience-desktop-nav a[aria-current] {
+  border-color: transparent;
+}
+body .button {
+  position: relative;
+  transition:
+    transform var(--motion-press) var(--ease-out),
+    background-color var(--motion-feedback),
+    border-color var(--motion-feedback),
+    opacity var(--motion-feedback);
+}
+body .button.primary {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--on-action) 20%, transparent),
+    0 4px 12px color-mix(in srgb, var(--action) 12%, transparent);
+}
+body .button:not(:disabled):active {
+  transform: scale(0.97);
+  filter: none;
+  transition-duration: 100ms;
+}
+body .button:disabled {
+  box-shadow: none;
+}
+body .button[aria-busy="true"] {
+  opacity: 0.72;
+}
+body .button-spinner {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: feedback-spin 0.7s linear infinite;
+}
+@keyframes feedback-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+body .field input:not([type="checkbox"]),
+body .field textarea,
+body .field select,
+body .experience-field input,
+body .experience-field textarea,
+body .experience-field select {
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--text) 4%, transparent);
+  transition:
+    border-color var(--motion-feedback),
+    background-color var(--motion-feedback);
+}
+body .field :is(input, textarea, select):focus-visible,
+body .experience-field :is(input, textarea, select):focus-visible {
+  border-color: var(--action);
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+body .field label,
+body .experience-field label {
+  font-size: 14px;
+  font-weight: 500;
+}
+body .field textarea {
+  line-height: 1.6;
+}
+body :is(.panel, .experience-empty, .empty) {
+  background: var(--surface);
+}
+body :is(.banner, .experience-notice) {
+  line-height: 1.65;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 65%, transparent);
+}
+body :is(.banner, .experience-notice, .motion-enter) {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--motion-feedback) var(--ease-out),
+    transform var(--motion-panel) var(--ease-out);
+}
+@starting-style {
+  body :is(.banner, .experience-notice, .motion-enter) {
+    opacity: 0.84;
+    transform: translateY(4px);
+  }
+}
+body :is(.empty, .experience-empty) {
+  padding: 48px 28px;
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    color-mix(in srgb, var(--action) 6%, var(--surface)),
+    var(--surface) 70%
+  );
+  box-shadow: var(--surface-shadow);
+}
+body :is(.empty, .experience-empty) h2 {
+  letter-spacing: -0.025em;
+}
+body :is(.badge, .experience-pill) {
+  font-weight: 500;
+  font-size: 12px;
+  padding: 5px 10px;
+}
+body dialog {
+  box-shadow: var(--surface-raised);
+  padding: 32px;
+  max-height: min(85dvh, 760px);
+  border-color: var(--control);
+}
+body dialog::backdrop {
+  background: color-mix(in srgb, var(--text) 45%, transparent);
+}
+body .dialog-heading {
+  margin-bottom: 16px;
+}
+body .dialog-heading h2 {
+  font-size: 25px;
+  letter-spacing: -0.025em;
+}
+body .experience-menu-nav > a {
+  padding: 14px 16px;
+  background: var(--subtle);
+}
+body .experience-menu-nav > a[aria-current] {
+  background: color-mix(in srgb, var(--action) 7%, var(--surface));
+}
+body .switch::after {
+  transition: transform var(--motion-feedback) var(--ease-out);
+}
+body .switch:checked::after {
+  left: 3px;
+  transform: translateX(20px);
+}
+body .transaction-feedback {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+}
+body .transaction-symbol {
+  font-size: 20px;
+  flex: none;
+}
+body .transaction-feedback[data-status="confirmed"] {
+  border-left-color: var(--success);
+}
+body .transaction-feedback[data-status="failed"],
+body .transaction-feedback[data-status="rejected"] {
+  border-left-color: var(--warning);
+}
+/* Marketing: a layered work scene and an editorial, asymmetric rhythm. */
+body .pp-page {
+  background: radial-gradient(
+    ellipse at 88% 2%,
+    color-mix(in srgb, var(--action) 5%, var(--surface)),
+    var(--surface) 28%
+  );
+}
+body .pp-hero {
+  grid-template-columns: minmax(0, 1.04fr) minmax(0, 1fr);
+  gap: 72px;
+  padding-top: 78px;
+  padding-bottom: 80px;
+}
+body .pp-hero h1 {
+  font-size: clamp(52px, 5.9vw, 84px);
+  line-height: 0.99;
+  letter-spacing: -0.045em;
+  margin: 22px 0 28px;
+}
+body .pp-hero h1 em {
+  display: inline-block;
+  margin-top: 6px;
+}
+body .pp-lead {
+  font-size: 18px;
+  max-width: 42ch;
+  line-height: 1.7;
+}
+body .pp-hero-visual {
+  position: relative;
+  padding: 18px;
+  background: var(--subtle);
+  box-shadow: var(--surface-raised);
+}
+body .pp-hero-visual::before {
+  content: "";
+  position: absolute;
+  top: -18px;
+  right: -18px;
+  width: 48%;
+  height: 56%;
+  border-top: 6px solid var(--action);
+  border-right: 6px solid var(--action);
+  pointer-events: none;
+}
+body .pp-hero-visual > img {
+  aspect-ratio: 1.16;
+  object-position: 48% center;
+}
+body .pp-product-note {
+  margin: -56px -2px 0 -42px;
+  position: relative;
+  padding: 22px 26px;
+  box-shadow: var(--surface-raised);
+  border-color: var(--border);
+  min-height: 112px;
+}
+body .pp-note-symbol {
+  flex: none;
+}
+body .pp-product-note .eyebrow {
+  font-size: 10px;
+  margin-top: 0;
+}
+body .pp-hero figcaption {
+  margin: 18px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+body .pp-section {
+  padding-top: 80px;
+  padding-bottom: 80px;
+}
+body .pp-page h2 {
+  font-size: clamp(32px, 3.5vw, 48px);
+  line-height: 1.1;
+}
+body .pp-section-top {
+  margin-bottom: 36px;
+}
+body .pp-categories {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 18px;
+}
+body .pp-categories > a {
+  grid-column: span 6;
+  grid-template-columns: 48px 1fr 20px;
+  align-items: start;
+  padding: 28px;
+  background: var(--surface);
+}
+body .pp-categories > a:nth-child(3) {
+  grid-column: span 7;
+  background: var(--subtle);
+}
+body .pp-categories > a:nth-child(4) {
+  grid-column: span 5;
+  background: var(--subtle);
+}
+body .pp-categories > a > img {
+  width: 40px;
+  height: 40px;
+}
+body .pp-categories > a > svg {
+  color: var(--action);
+  justify-self: end;
+  margin-top: 4px;
+}
+body .pp-categories h3 {
+  font-size: 24px;
+  margin-bottom: 12px;
+}
+body .pp-categories p {
+  font-size: 15px;
+}
+body .pp-band {
+  background: linear-gradient(
+    135deg,
+    var(--subtle),
+    color-mix(in srgb, var(--action) 4%, var(--surface))
+  );
+  padding: 72px 0;
+}
+body .pp-role {
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  gap: 4px;
+}
+body .pp-role .button {
+  min-height: 44px;
+}
+body .pp-steps {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 20px;
+}
+body .pp-steps article {
+  grid-column: span 3;
+  padding: 28px;
+  background: var(--surface);
+  border-top: 3px solid var(--border);
+}
+body .pp-steps article:first-child {
+  grid-column: span 6;
+  background: var(--surface);
+  border-top-color: var(--action);
+  box-shadow: var(--surface-shadow);
+}
+body .pp-steps article img {
+  width: 100px;
+  height: 100px;
+}
+body .pp-steps article:first-child img {
+  width: 144px;
+  height: 144px;
+}
+body .pp-steps article h3 {
+  font-size: 22px;
+}
+body .pp-steps article:first-child h3 {
+  font-size: 28px;
+}
+body .pp-voice {
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 80px;
+}
+body .pp-voice > div > img {
+  width: 128px;
+  height: 128px;
+  filter: drop-shadow(
+    0 10px 10px color-mix(in srgb, var(--text) 8%, transparent)
+  );
+}
+body .pp-voice-example {
+  background: var(--surface);
+  padding: 36px;
+  border-top: 3px solid var(--action);
+  box-shadow: var(--surface-raised);
+}
+body .pp-voice-example::before {
+  content: "";
+  display: block;
+  width: 52px;
+  height: 3px;
+  background: var(--action);
+  margin-bottom: 26px;
+}
+body .pp-page details summary {
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+body .pp-page details summary::-webkit-details-marker {
+  display: none;
+}
+body .pp-page details summary::after {
+  content: "+";
+  color: var(--action);
+  font-size: 25px;
+  font-weight: 400;
+  flex: none;
+}
+body .pp-page details[open] summary::after {
+  content: "−";
+}
+body .pp-proof {
+  background: linear-gradient(
+    120deg,
+    var(--text),
+    color-mix(in srgb, var(--action) 16%, var(--text))
+  );
+}
+body .pp-proof-grid {
+  gap: 80px;
+}
+body .pp-proof-links > a {
+  padding: 24px 0;
+}
+body .pp-proof-links strong {
+  font-size: 18px;
+}
+body .pp-usecases {
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 24px;
+}
+body .pp-usecases article {
+  padding: 36px;
+  background: var(--subtle);
+}
+body .pp-usecases article:last-child {
+  margin-top: 32px;
+  background: var(--surface);
+}
+body .pp-usecases h3 {
+  font-size: 28px;
+  max-width: 22ch;
+}
+body .pp-about {
+  display: grid;
+  grid-template-columns: 0.6fr 1.4fr;
+  gap: 0 64px;
+  background: var(--subtle);
+}
+body .pp-about > .eyebrow {
+  grid-column: 1;
+  grid-row: 1/4;
+  margin: 14px 0;
+}
+body .pp-about > :not(.eyebrow) {
+  grid-column: 2;
+}
+body .pp-about h2 {
+  max-width: 22ch;
+}
+body .pp-faq {
+  gap: 96px;
+}
+body .pp-faq > div:first-child {
+  position: sticky;
+  align-self: start;
+  top: 110px;
+}
+body .pp-faq details {
+  padding: 8px 0;
+}
+body .pp-footer {
+  padding-top: 64px;
+  padding-bottom: 48px;
+  background: var(--subtle);
+}
+body .pp-footer-grid {
+  grid-template-columns: 1.65fr repeat(3, 1fr);
+  gap: 40px;
+}
+body .pp-footer-grid > div > p {
+  max-width: 32ch;
+  margin-top: 20px;
+}
+body .pp-footer h3 {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+/* Discovery and workspace: content is readable and stable while requests run. */
+body .discovery-heading {
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  border-left: 3px solid var(--action);
+  background: linear-gradient(110deg, var(--subtle), var(--surface));
+}
+body .discovery-heading h1 {
+  font-size: clamp(28px, 3vw, 40px);
+  margin-bottom: 12px;
+}
+body .discovery-search input {
+  padding-left: 48px;
+  background-image: none;
+  background-repeat: no-repeat;
+  background-size: 20px;
+  background-position: 16px center;
+  min-height: 54px;
+}
+body .discovery-categories {
+  padding: 4px 0 12px;
+  gap: 8px;
+}
+body .discovery-categories .button {
+  background: var(--subtle);
+  border-color: transparent;
+}
+body .discovery-categories .button[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--surface);
+}
+body .discovery-layout {
+  grid-template-columns: minmax(0, 1fr) 272px;
+  gap: 32px;
+}
+body .discovery-quest {
+  padding: 26px 28px;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--text) 3%, transparent);
+}
+body .discovery-card-top {
+  padding-bottom: 4px;
+}
+body .discovery-quest h3 {
+  margin: 18px 0 12px;
+  font-size: 25px;
+  max-width: 44ch;
+}
+body .discovery-metadata {
+  background: var(--subtle);
+  border: 0;
+  padding: 18px;
+  margin-top: 20px;
+  gap: 24px;
+}
+body .discovery-metadata dt {
+  font-size: 11px;
+}
+body .discovery-metadata dd strong {
+  font-size: 27px;
+  font-variant-numeric: tabular-nums;
+}
+body .discovery-card-footer {
+  margin-top: 16px;
+}
+body .discovery-initials {
+  background: color-mix(in srgb, var(--action) 5%, var(--surface));
+  border-color: color-mix(in srgb, var(--action) 18%, var(--border));
+}
+body .discovery-filters {
+  background: var(--surface);
+  box-shadow: var(--surface-shadow);
+  border-top: 3px solid var(--action);
+}
+body .discovery-context {
+  position: sticky;
+  top: 104px;
+}
+body .discovery-network-note {
+  padding: 28px 12px 0;
+}
+body .discovery-network-note h2 {
+  font-size: 23px;
+}
+body .discovery-loading {
+  background: var(--surface);
+}
+body .discovery-loading > div {
+  position: relative;
+  overflow: hidden;
+  background: var(--subtle);
+  border: 0;
+}
+body .discovery-loading > div::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--surface) 65%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: loading-sweep 1.5s linear infinite;
+}
+@keyframes loading-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+body .dashboard-page {
+  padding-bottom: 32px;
+}
+body .dashboard-page > h1 {
+  margin-bottom: 20px;
+}
+body .dashboard-page .role-switch {
+  margin-bottom: 28px;
+}
+body .dashboard-updates {
+  padding: 26px 28px;
+  background: var(--subtle);
+  border-left: 3px solid var(--action);
+  margin: 24px 0;
+}
+body .dashboard-updates h2 {
+  font-size: 22px;
+  margin-bottom: 16px;
+}
+body .notification-list {
+  display: grid;
+  gap: 6px;
+}
+body .notification-list > a {
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  line-height: 1.6;
+}
+body .dashboard-market {
+  padding-top: 16px;
+}
+body .dashboard-market .filters {
+  background: var(--subtle);
+  padding: 20px;
+  gap: 16px;
+}
+body .dashboard-market .filters .field {
+  min-width: 140px;
+}
+body .dashboard-market .filters .field:first-child {
+  flex: 1.6;
+}
+body .dashboard-quest-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+body .dashboard-quest-grid .discovery-metadata {
+  gap: 12px;
+  padding: 14px;
+}
+body .dashboard-quest-grid .discovery-quest h3 {
+  font-size: 22px;
+}
+/* Account, creation and public profile share the same surface hierarchy. */
+body .account-composition {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
+  gap: 0 88px;
+  max-width: 1180px;
+  padding-top: 64px;
+  min-height: 640px;
+  align-content: start;
+}
+body .account-composition > :not(.account-context) {
+  grid-column: 1;
+}
+body .account-context {
+  grid-column: 2;
+  grid-row: 1/12;
+  align-self: start;
+  position: sticky;
+  top: 112px;
+  padding: 36px;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--action) 6%, var(--surface)),
+    var(--subtle)
+  );
+  border: 1px solid var(--border);
+}
+body .account-context > h2 {
+  font-size: 31px;
+  letter-spacing: -0.03em;
+  margin: 24px 0 18px;
+  line-height: 1.2;
+}
+body .account-context > p {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+body .account-context-art {
+  display: block;
+  width: 144px;
+  height: 144px;
+  margin: 22px auto;
+}
+body .account-context dl {
+  display: grid;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+body .account-context dt {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+body .account-context dd {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 0;
+}
+body .account-composition .account-form {
+  padding: 26px;
+  border: 1px solid var(--border);
+  box-shadow: var(--surface-shadow);
+  background: var(--surface);
+  margin-top: 12px;
+}
+body .account-composition .account-form .field {
+  margin-bottom: 0;
+}
+body .account-composition .account-form > .button {
+  width: 100%;
+}
+body .account-links {
+  gap: 0;
+}
+body .create-page .page-heading {
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+body .create-page .split > aside {
+  background: var(--subtle);
+  border-top: 3px solid var(--action);
+  position: sticky;
+  top: 104px;
+}
+body .create-page .split > aside h2 {
+  font-size: 26px;
+  letter-spacing: -0.025em;
+}
+body .create-page .form > form {
+  padding: 28px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--surface-shadow);
+}
+body .create-page .form > form > .field {
+  margin-bottom: 26px;
+}
+body .create-page .form .checklist {
+  line-height: 1.65;
+}
+body .voice-workspace {
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.2fr);
+  gap: 16px;
+}
+body .voice-stage {
+  box-shadow: var(--surface-shadow);
+}
+body .voice-halo {
+  transform: scale(1);
+  opacity: 0.5;
+}
+body .voice-mic {
+  transform: perspective(600px) rotateY(-14deg) rotateX(5deg);
+  transition: transform 100ms linear;
+}
+body .voice-wave i {
+  transform: scaleY(0.3);
+  opacity: 0.25;
+  transition:
+    transform 100ms linear,
+    opacity 100ms linear;
+}
+body .voice-stage[data-state="ready"] {
+  border-color: var(--success);
+}
+body .voice-stage[data-state="failure"] {
+  border-color: var(--danger);
+}
+body .voice-stage[data-state="ready"] .voice-halo {
+  opacity: 0.9;
+}
+body .voice-chat-heading {
+  background: var(--subtle);
+}
+body .voice-editor textarea {
+  background: var(--surface);
+}
+body .voice-chat-empty {
+  background: linear-gradient(145deg, var(--subtle), var(--surface));
+}
+body .voice-message.agent p {
+  border-left: 2px solid var(--action);
+}
+/* Decision surfaces, private messages and confirmed receipts retain domain logic. */
+body .qd-context {
+  padding: 28px 32px;
+  background: linear-gradient(115deg, var(--subtle), var(--surface));
+  border-left: 3px solid var(--action);
+}
+body .qd-context h1 {
+  max-width: 38ch;
+  margin: 18px 0 22px;
+}
+body .qd-layout {
+  gap: 48px;
+}
+body .qd-decision {
+  background: var(--surface);
+  border-top: 3px solid var(--action);
+  box-shadow: var(--surface-raised);
+}
+body .qd-reward {
+  font-size: 42px;
+  font-variant-numeric: tabular-nums;
+}
+body .qd-timing {
+  background: var(--subtle);
+  padding: 16px;
+  border: 0;
+}
+body .qd-readiness {
+  border-top: 1px solid var(--border);
+  margin-top: 20px;
+}
+body .qd-agreement > section {
+  padding: 26px 28px;
+  max-width: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  margin-bottom: 24px;
+}
+body .qd-agreement > section p {
+  max-width: 65ch;
+}
+body .qd-requirements li {
+  padding: 18px 0;
+}
+body .qd-requirements li > span {
+  color: var(--action);
+  font-weight: 500;
+}
+body .qd-recovery {
+  border-left: 3px solid var(--warning);
+  background: var(--subtle);
+}
+body .aw-context {
+  padding: 24px 28px;
+  background: linear-gradient(115deg, var(--subtle), var(--surface));
+  border: 1px solid var(--border);
+}
+body .aw-summary {
+  padding-left: 28px;
+  border-left: 1px solid var(--border);
+  max-width: 280px;
+}
+body .aw-summary strong {
+  font-variant-numeric: tabular-nums;
+}
+body .aw-next {
+  background: color-mix(in srgb, var(--action) 5%, var(--surface));
+  box-shadow: var(--surface-shadow);
+  padding: 28px;
+}
+body .aw-next h2 {
+  font-size: 28px;
+}
+body .aw-nav {
+  background: var(--surface);
+  gap: 0;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  margin-top: 24px;
+}
+body .aw-nav > a {
+  padding: 0 20px;
+}
+body .aw-nav > a[aria-current] {
+  background: var(--subtle);
+  font-weight: 500;
+}
+body .aw-grid {
+  gap: 32px;
+}
+body .aw-controls {
+  background: var(--surface);
+  box-shadow: var(--surface-shadow);
+  position: sticky;
+  top: 104px;
+  border-top: 3px solid var(--action);
+}
+body .aw-section-heading {
+  font-size: 24px;
+  letter-spacing: -0.025em;
+}
+body .aw-section .panel {
+  box-shadow: var(--surface-shadow);
+}
+body .aw-section .message-list {
+  padding: 20px;
+  background: var(--subtle);
+}
+body .message {
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--border);
+  background: var(--surface);
+  margin-bottom: 16px;
+  line-height: 1.65;
+}
+body .aw-section .message {
+  background: var(--surface);
+}
+body .aw-section .message.mine {
+  background: color-mix(in srgb, var(--action) 5%, var(--surface));
+  border-left-color: var(--action);
+}
+body .aw-section .account-form {
+  padding: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+body .aw-section .account-form .field {
+  margin: 0;
+}
+body .deliverable-file,
+body .aw-upload {
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--text) 3%, transparent);
+}
+body .aw-upload {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+body .aw-upload[aria-busy="true"] {
+  border-left: 3px solid var(--action);
+}
+body .rv-intro {
+  padding: 24px 28px;
+  background: var(--subtle);
+  border-left: 3px solid var(--action);
+}
+body .rv-delivery,
+body .rv-agreement {
+  box-shadow: var(--surface-shadow);
+}
+body .rv-decision {
+  background: color-mix(in srgb, var(--action) 4%, var(--surface));
+}
+body .rv-settlement {
+  background: linear-gradient(115deg, var(--subtle), var(--surface));
+  box-shadow: var(--surface-shadow);
+}
+body .rv-settlement h3 {
+  font-size: 32px;
+  letter-spacing: -0.03em;
+}
+body .rv-activity ol {
+  padding-left: 16px;
+  border-left: 2px solid var(--border);
+}
+body .rv-activity li {
+  position: relative;
+  padding-left: 16px;
+}
+body .rv-activity li::before {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  left: -21px;
+  top: 26px;
+  background: var(--action);
+}
+body .rv-materials li,
+body .rv-criterion {
+  background: var(--subtle);
+}
+body .confirmed-version {
+  overflow-wrap: anywhere;
+}
+@media (hover: hover) and (pointer: fine) {
+  body .button:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+  body .experience-desktop-nav > a:hover::after {
+    transform: scaleX(1);
+  }
+  body :is(.pp-categories > a, .discovery-quest) {
+    transition:
+      transform var(--motion-feedback) var(--ease-out),
+      border-color var(--motion-feedback);
+  }
+  body :is(.pp-categories > a, .discovery-quest):hover {
+    transform: translateY(-2px);
+    border-color: var(--action);
+  }
+  body .pp-categories > a:hover {
+    text-decoration: none;
+  }
+  body :is(.discovery-card-link, .pp-section-top > a, .pp-usecases a) svg,
+  body .discovery-card-link img {
+    transition: transform var(--motion-feedback) var(--ease-out);
+  }
+  body
+    :is(.discovery-card-link, .pp-section-top > a, .pp-usecases a):hover
+    svg {
+    transform: translate(2px, -2px);
+  }
+  body .discovery-card-link:hover img {
+    transform: translateX(3px);
+  }
+}
+@media (max-width: 1100px) {
+  body .pp-hero {
+    gap: 40px;
+  }
+  body .pp-hero h1 {
+    font-size: 64px;
+  }
+  body .pp-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  body .pp-steps article {
+    grid-column: auto;
+  }
+  body .pp-steps article:first-child {
+    grid-column: 1/-1;
+  }
+  body .account-composition {
+    gap: 0 40px;
+  }
+  body .voice-workspace {
+    grid-template-columns: 1fr;
+  }
+  body .voice-visual {
+    height: 210px;
+  }
+  body .dashboard-quest-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 800px) {
+  body .pp-hero {
+    grid-template-columns: 1fr;
+    padding-top: 40px;
+    padding-bottom: 44px;
+    gap: 44px;
+  }
+  body .pp-hero h1 {
+    font-size: clamp(44px, 10vw, 68px);
+    line-height: 1.01;
+  }
+  body .pp-lead {
+    font-size: 17px;
+  }
+  body .pp-hero-visual {
+    margin-right: 10px;
+    padding: 12px;
+  }
+  body .pp-hero-visual > img {
+    aspect-ratio: 1.5;
+  }
+  body .pp-hero-visual::before {
+    right: -10px;
+    top: -10px;
+    border-width: 4px;
+  }
+  body .pp-product-note {
+    margin: -30px -2px 0 -2px;
+    padding: 18px;
+    min-height: 104px;
+  }
+  body .pp-hero figcaption {
+    margin: 14px 0 0;
+  }
+  body .pp-section {
+    padding-top: 52px;
+    padding-bottom: 52px;
+  }
+  body .pp-page h2 {
+    font-size: 34px;
+  }
+  body .pp-categories {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  body .pp-categories > a,
+  body .pp-categories > a:nth-child(3),
+  body .pp-categories > a:nth-child(4) {
+    grid-column: auto;
+    padding: 22px;
+    grid-template-columns: 36px 1fr 16px;
+    gap: 18px;
+  }
+  body .pp-categories > a > img {
+    width: 30px;
+    height: 30px;
+  }
+  body .pp-categories h3 {
+    font-size: 22px;
+  }
+  body .pp-categories p {
+    font-size: 14px;
+  }
+  body .pp-band {
+    padding: 48px 0;
+  }
+  body .pp-role {
+    width: fit-content;
+  }
+  body .pp-steps {
+    grid-template-columns: 1fr;
+  }
+  body .pp-steps article,
+  body .pp-steps article:first-child {
+    grid-column: auto;
+    padding: 22px;
+  }
+  body .pp-steps article img,
+  body .pp-steps article:first-child img {
+    width: 72px;
+    height: 72px;
+  }
+  body .pp-steps article h3,
+  body .pp-steps article:first-child h3 {
+    font-size: 23px;
+  }
+  body .pp-voice,
+  body .pp-proof-grid,
+  body .pp-usecases,
+  body .pp-faq {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  body .pp-voice-example {
+    padding: 24px;
+  }
+  body .pp-usecases article {
+    padding: 26px;
+  }
+  body .pp-usecases article:last-child {
+    margin-top: 0;
+  }
+  body .pp-about {
+    display: block;
+  }
+  body .pp-faq > div:first-child {
+    position: static;
+  }
+  body .pp-footer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px;
+  }
+  body .pp-footer-grid > div {
+    grid-column: 1/-1;
+  }
+  body .discovery-heading {
+    padding: 20px 18px;
+    margin-bottom: 18px;
+  }
+  body .discovery-heading h1 {
+    font-size: 28px;
+  }
+  body .discovery-layout {
+    grid-template-columns: 1fr;
+  }
+  body .discovery-context {
+    position: static;
+  }
+  body .discovery-quest {
+    padding: 22px 20px;
+  }
+  body .discovery-quest h3 {
+    font-size: 22px;
+  }
+  body .discovery-metadata {
+    gap: 16px;
+    padding: 14px;
+  }
+  body .discovery-network-note {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  body .account-composition {
+    display: flex;
+    flex-direction: column;
+    padding-top: 36px;
+  }
+  body .account-context {
+    order: 2;
+    position: static;
+    margin-top: 32px;
+    padding: 28px;
+  }
+  body .account-context-art {
+    width: 112px;
+    height: 112px;
+  }
+  body .account-composition .account-form {
+    padding: 22px;
+  }
+  body .create-page .split > aside {
+    position: static;
+  }
+  body .create-page .form > form {
+    padding: 20px;
+  }
+  body .qd-context {
+    padding: 24px 20px;
+  }
+  body .qd-context h1 {
+    font-size: 28px;
+  }
+  body .qd-decision {
+    padding: 22px;
+  }
+  body .qd-agreement > section {
+    padding: 22px 20px;
+  }
+  body .aw-context {
+    padding: 22px 20px;
+  }
+  body .aw-summary {
+    padding: 0;
+    border: 0;
+    max-width: none;
+  }
+  body .aw-next {
+    padding: 22px 20px;
+  }
+  body .aw-next h2 {
+    font-size: 25px;
+  }
+  body .aw-controls {
+    position: static;
+  }
+  body .aw-nav > a {
+    padding: 0 16px;
+  }
+  body .aw-section .message-list {
+    padding: 14px;
+  }
+  body .rv-intro {
+    padding: 22px 20px;
+  }
+  body main > .page,
+  body .discovery-page,
+  body .qd-page,
+  body .aw-page {
+    padding-top: 28px;
+  }
+}
+@media (max-width: 360px) {
+  body .experience-header {
+    gap: 6px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  body .experience-home img {
+    width: 104px;
+  }
+  body .experience-header .experience-mode select {
+    width: 120px;
+  }
+  body .pp-hero h1 {
+    font-size: 43px;
+  }
+  body .pp-categories > a,
+  body .pp-categories > a:nth-child(3),
+  body .pp-categories > a:nth-child(4) {
+    padding: 18px;
+    gap: 12px;
+  }
+  body .pp-footer-grid {
+    grid-template-columns: 1fr;
+  }
+  body .discovery-card-footer {
+    flex-wrap: wrap;
+  }
+}
+/* Keyboard changes, reduced motion and live reading never wait on movement. */
+html[data-input="keyboard"]
+  body
+  :is(.button, .motion-enter, .banner, .experience-notice) {
+  transition: none;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  body *,
+  body *::before,
+  body *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  body
+    :is(
+      .button,
+      .discovery-quest,
+      .pp-categories > a,
+      .voice-halo,
+      .voice-wave i,
+      .motion-enter,
+      .banner,
+      .experience-notice
+    ) {
+    transform: none !important;
+  }
+  body .voice-mic {
+    transform: none !important;
+  }
+  body .button-spinner {
+    border-right-color: currentColor;
+  }
+}
+/* Native top-layer ownership keeps focus restoration and repeated Escape exact. */
+body dialog[open] {
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    transform var(--motion-panel) var(--ease-drawer),
+    opacity var(--motion-feedback) var(--ease-out);
+}
+@starting-style {
+  body dialog[open] {
+    opacity: 0.84;
+    transform: scale(0.98);
+  }
+}
+html[data-input="keyboard"] body dialog[open] {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  body dialog[open] {
+    transform: none;
+  }
+}
+body .pp-demo-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--subtle);
+  margin: 12px 0 20px;
+}
+body .pp-demo-tabs > button {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  cursor: pointer;
+  padding: 10px 12px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 13px;
+}
+body .pp-demo-tabs > button[aria-selected="true"] {
+  background: var(--surface);
+  color: var(--action);
+  box-shadow: var(--surface-shadow);
+}
+body .pp-demo-panel {
+  min-height: 180px;
+}
+body .pp-demo-panel[hidden] {
+  display: none;
+}
+body .pp-demo-panel h4 {
+  font-size: 16px;
+}
+body .pp-demo-panel p {
+  line-height: 1.7;
+  font-size: 15px;
+}
+body .assistant-panel {
+  margin-bottom: 26px;
+  background: linear-gradient(130deg, var(--surface), var(--subtle));
+}
+body .assistant-panel > h3 {
+  font-size: 26px;
+  letter-spacing: -0.025em;
+}
+body .assistant-proposal {
+  border-top: 3px solid var(--action);
+  background: var(--surface);
+  padding: 24px;
+  margin-top: 24px;
+  box-shadow: var(--surface-shadow);
+}
+body .assistant-proposal ul {
+  line-height: 1.7;
+  padding-left: 22px;
+}
+@media (max-width: 800px) {
+  body .pp-demo-tabs > button {
+    padding: 10px 6px;
+    font-size: 12px;
+  }
+}
+body .create-methods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  width: auto;
+  order: 0;
+  justify-content: start;
+  padding: 0 0 16px;
+  margin-top: 16px;
+}
+body .create-methods a {
+  min-height: 44px;
+  font-size: 14px;
+  border: 0;
+}
+body :is(#manual-brief, #brief-assistant) {
+  scroll-margin-top: 110px;
+}
+body .public-profile {
+  max-width: 960px;
+}
+body .public-profile-heading {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin: 24px 0;
+}
+body .public-profile-heading h1 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+body .public-profile-initials {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 72px;
+  height: 72px;
+  background: var(--subtle);
+  color: var(--action);
+  font-size: 24px;
+  border: 1px solid var(--border);
+}
+body .public-profile > .submission-text {
+  padding: 28px;
+  background: var(--subtle);
+  border-left: 3px solid var(--action);
+  line-height: 1.8;
+  margin: 32px 0;
+}
+body .access-state {
+  margin-top: 48px;
+  margin-bottom: 48px;
+  background: var(--subtle);
+  border-left: 3px solid var(--action);
+  max-width: 800px;
+}
+body .access-state .eyebrow {
+  margin-top: 24px;
+}
+body .access-state p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.7;
+}
+body .motion-showcase h2 {
+  font-size: 28px;
+}
+body .motion-showcase .voice-stage {
+  max-width: 400px;
+  margin: auto;
+}
+body .motion-measurement {
+  background: var(--subtle);
+  padding: 20px;
+  overflow: auto;
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+}
+body .aw-next[data-state="paid"],
+body .rv-settlement[data-status="paid"] {
+  border-left: 3px solid var(--success);
+}
+body .aw-next[data-state="unknown"],
+body .aw-next[data-state="refunded"],
+body .rv-settlement[data-status="refunded"] {
+  border-left: 3px solid var(--warning);
+}
+body .discovery-results[aria-busy="true"]::after {
+  content: "Loading more quests…";
+  color: var(--muted);
+  font-size: 13px;
+  padding: 12px 0;
+}
+body .aw-upload progress {
+  width: min(240px, 100%);
+  accent-color: var(--action);
+}
+html[data-input="keyboard"] body .button:is(:hover, :active),
+html[data-input="keyboard"]
+  body
+  :is(.discovery-quest, .pp-categories > a):hover {
+  transform: none;
+  transition: none;
+}
+html[data-input="keyboard"] body .experience-desktop-nav > a::after {
+  transition: none;
+}
+body .discovery-search {
+  position: relative;
+}
+body .discovery-search-icon {
+  position: absolute;
+  left: 16px;
+  top: 17px;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+html[data-input="keyboard"]
+  body
+  :is(.discovery-card-link, .pp-section-top > a, .pp-usecases a):hover
+  svg,
+html[data-input="keyboard"] body .discovery-card-link:hover img {
+  transform: none;
+  transition: none;
+}
+html[data-input="keyboard"] body .switch::after {
+  transition: none;
+}
+
+/* Mobile navigation is the only right drawer; wallet confirmations remain dialogs. */
+body dialog.menu-drawer[open] {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: hidden;
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+body .menu-drawer::backdrop {
+  background: transparent;
+}
+body .menu-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--text) 32%, transparent);
+}
+body .menu-drawer-panel {
+  overflow-x: hidden;
+  position: relative;
+  margin-left: auto;
+  width: min(88vw, 380px);
+  height: 100%;
+  background: var(--surface);
+  box-shadow: -8px 0 32px color-mix(in srgb, var(--text) 12%, transparent);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: max(20px, env(safe-area-inset-top)) 20px
+    max(24px, env(safe-area-inset-bottom));
+}
+body .menu-drawer .dialog-heading {
+  align-items: start;
+  gap: 12px;
+}
+body .menu-drawer .dialog-heading h2 {
+  font-size: 22px;
+}
+body .menu-drawer .dialog-heading button {
+  min-width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+}
+body .menu-drawer .experience-menu-nav a {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+body .menu-drawer-content {
+  padding-top: 20px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 480px) {
+  body input,
+  body textarea,
+  body select {
+    font-size: max(16px, 1em);
+  }
+  body .experience-header {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+}
+body .aw-nav {
+  position: relative;
+}
+body .aw-moving-indicator {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 1px;
+  height: 2px;
+  background: var(--action);
+  transform-origin: left center;
+  pointer-events: none;
+}
+body .menu-drawer .experience-menu-nav {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+body .menu-drawer .experience-account-menu {
+  align-items: stretch;
+}
+body .menu-drawer .account-link {
+  margin-left: 0;
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: flex-start;
+}
+/* First-paint marketing orientation; never hides primary content or waits for scroll. */
+body .pp-hero > div,
+body .pp-hero-visual {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 260ms var(--ease-out),
+    transform 260ms var(--ease-out);
+}
+body .pp-hero-visual {
+  transition-delay: 40ms;
+}
+body .assistant-proposal {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--motion-feedback) var(--ease-out),
+    transform var(--motion-panel) var(--ease-out);
+}
+@starting-style {
+  body .pp-hero > div,
+  body .pp-hero-visual {
+    opacity: 0.84;
+    transform: translateY(6px);
+  }
+  body .assistant-proposal {
+    opacity: 0.84;
+    transform: translateY(4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body .pp-hero > div,
+  body .pp-hero-visual,
+  body .assistant-proposal {
+    transform: none;
+    opacity: 1;
+    transition: none;
+  }
+}
+html[data-input="keyboard"] body .assistant-proposal {
+  transition: none;
+  transform: none;
+}
+/* Superseding expressive motion pass. Foundation tokens and resting layout stay locked. */
+html[data-motion="expressive"] .pp-page {
+  overflow-x: clip;
+}
+html[data-motion="expressive"] .pp-headline-main,
+html[data-motion="expressive"] .pp-hero h1 em {
+  display: inline-block;
+  transform-origin: left bottom;
+}
+html[data-motion="expressive"] body .pp-hero > div,
+html[data-motion="expressive"] body .pp-hero-visual,
+html[data-motion="expressive"] body .assistant-proposal {
+  transition: none;
+}
+html[data-motion="expressive"] body dialog[open]:not(.menu-drawer) {
+  transition:
+    transform 280ms var(--ease-out),
+    opacity 220ms var(--ease-out);
+  transform-origin: center;
+}
+@starting-style {
+  html[data-motion="expressive"] body dialog[open]:not(.menu-drawer) {
+    transform: perspective(900px) translateY(20px) rotateX(4deg) scale(0.96);
+    opacity: 0.92;
+  }
+}
+html[data-motion="expressive"] body .button {
+  position: relative;
+}
+html[data-motion="expressive"] body .discovery-quest,
+html[data-motion="expressive"] body .pp-categories > a {
+  transition:
+    transform 240ms var(--ease-out),
+    border-color 160ms ease;
+}
+html[data-motion="expressive"] .motion-confirmation-burst {
+  position: absolute;
+  top: 24px;
+  right: 30px;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+html[data-motion="expressive"] .motion-confirmation-burst i {
+  position: absolute;
+  width: 2px;
+  height: 10px;
+  background: var(--success);
+  transform-origin: center bottom;
+  opacity: 0;
+}
+html[data-motion="expressive"] .rv-settlement,
+html[data-motion="expressive"] .transaction-feedback {
+  position: relative;
+}
+html[data-motion="expressive"] body .transaction-symbol {
+  transition: transform 220ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  html[data-motion="expressive"] body .button {
+    overflow: hidden;
+    transition:
+      transform 220ms var(--ease-out),
+      background-color 160ms ease;
+  }
+  html[data-motion="expressive"] body .button::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      110deg,
+      transparent 20%,
+      currentColor 48%,
+      transparent 72%
+    );
+    opacity: 0.1;
+    transform: translateX(-150%) skewX(-18deg);
+    transition: transform 480ms var(--ease-out);
+  }
+  html[data-motion="expressive"] body .button:hover::after {
+    transform: translateX(150%) skewX(-18deg);
+  }
+  html[data-motion="expressive"] body .button:hover:not(:disabled) {
+    transform: translateY(-2px);
+  }
+  html[data-motion="expressive"] body .button:active:not(:disabled) {
+    transform: translateY(1px) scale(0.96);
+    transition-duration: 100ms;
+  }
+  html[data-motion="expressive"] body .discovery-card-link :is(img, svg),
+  html[data-motion="expressive"] body .pp-categories img {
+    transition: transform 280ms var(--ease-out);
+  }
+  html[data-motion="expressive"]
+    body
+    .discovery-quest:hover
+    .discovery-card-link
+    svg {
+    transform: translateX(8px) rotate(-8deg);
+  }
+  html[data-motion="expressive"] body .pp-categories > a:hover img {
+    transform: translateY(-4px) rotate(-8deg) scale(1.08);
+  }
+  html[data-motion="expressive"] body .experience-desktop-nav > a::after {
+    transition: transform 240ms var(--ease-out);
+  }
+}
+html[data-input="keyboard"][data-motion="expressive"] body .button,
+html[data-input="keyboard"][data-motion="expressive"]
+  body
+  dialog[open]:not(.menu-drawer) {
+  transition: none;
+  transform: none;
+}
+html[data-input="keyboard"][data-motion="expressive"] body .button::after {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-motion="expressive"]
+    body
+    :is(
+      .button,
+      .discovery-quest,
+      .pp-categories > a,
+      .assistant-proposal,
+      .transaction-symbol
+    ) {
+    transform: none !important;
+    transition: none;
+  }
+  html[data-motion="expressive"] body .button::after {
+    display: none;
+  }
+  html[data-motion="expressive"] body dialog[open]:not(.menu-drawer) {
+    transform: none;
+    opacity: 1;
+    transition: none;
+  }
+}
+
+html[data-motion="expressive"] .pp-story-wave {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 48px;
+  margin: 20px 0;
+}
+html[data-motion="expressive"] .pp-story-wave i {
+  display: block;
+  width: 4px;
+  background: var(--action);
+  transform-origin: center;
+}
+html[data-motion="expressive"] .discovery-categories button::before {
+  content: "";
+  position: absolute;
+  bottom: 5px;
+  left: 16px;
+  right: 16px;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.45;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 240ms var(--ease-out);
+}
+html[data-motion="expressive"]
+  .discovery-categories
+  button[aria-pressed="true"]::before {
+  transform: scaleX(1);
+}
+html[data-motion="expressive"] .experience-menu-button img {
+  transition: transform 280ms var(--ease-out);
+}
+html[data-motion="expressive"]
+  .experience-menu-button[aria-expanded="true"]
+  img {
+  transform: rotate(90deg);
+}
+html[data-motion="expressive"] .aw-upload[aria-busy="true"]::before {
+  content: "";
+  display: block;
+  height: 2px;
+  width: 80px;
+  background: var(--action);
+  animation: expressive-upload 1.4s var(--ease-in-out) infinite;
+}
+@keyframes expressive-upload {
+  0%,
+  100% {
+    transform: scaleX(0.25);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+html[data-input="keyboard"][data-motion="expressive"]
+  .discovery-categories
+  button::before {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-motion="expressive"] .experience-menu-button img {
+    transform: none !important;
+    transition: none;
+  }
+  html[data-motion="expressive"] .discovery-categories button::before {
+    transition: none;
+  }
+  html[data-motion="expressive"] .aw-upload::before {
+    animation: none !important;
+  }
+}
+
+html[data-motion="expressive"]
+  .pp-brief-demo[data-pointer="true"]
+  .pp-demo-panel:not([hidden])
+  li {
+  transform: none;
+  transition: transform 360ms var(--ease-out);
+}
+html[data-motion="expressive"] .pp-demo-panel li:nth-child(2) {
+  transition-delay: 40ms;
+}
+html[data-motion="expressive"] .pp-demo-panel li:nth-child(3) {
+  transition-delay: 80ms;
+}
+@starting-style {
+  html[data-motion="expressive"]
+    .pp-brief-demo[data-pointer="true"]
+    .pp-demo-panel:not([hidden])
+    li {
+    transform: translateX(20px);
+  }
+}
+html[data-motion-paused="true"] body .voice-halo,
+html[data-motion-paused="true"] body .aw-upload::before,
+html[data-motion="expressive"]
+  .voice-stage[data-motion-in-view="false"]
+  .voice-halo,
+html[data-motion="expressive"] .aw-upload[data-motion-in-view="false"]::before {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-motion="expressive"] .pp-demo-panel li {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  html[data-motion="expressive"] .notification-list > a {
+    transition: transform 220ms var(--ease-out);
+  }
+  html[data-motion="expressive"] .notification-list > a:hover {
+    transform: translateX(6px);
+  }
+}
+html[data-input="keyboard"][data-motion="expressive"] .notification-list > a {
+  transform: none;
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-motion="expressive"] .notification-list > a {
+    transform: none !important;
+    transition: none;
+  }
+}
+/* A new unresolved operation cannot inherit a prior confirmation's decoration. */
+html[data-motion="expressive"]
+  .transaction-feedback:not([data-status="confirmed"])
+  .motion-confirmation-burst,
+html[data-motion="expressive"]
+  .rv-settlement:not([data-status="paid"])
+  .motion-confirmation-burst {
+  display: none;
+}

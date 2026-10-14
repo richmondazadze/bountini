@@ -403,6 +403,16 @@ export function DeliverableEditor({
         <div
           key={u.id}
           className="aw-upload"
+          data-upload-state={
+            u.error
+              ? "error"
+              : u.uploading
+                ? "uploading"
+                : u.attachment
+                  ? "uploaded"
+                  : "pending"
+          }
+          aria-busy={u.uploading || undefined}
           role="group"
           aria-label={u.file.name}
         >

@@ -20,9 +20,23 @@ export default async function Page({
       ? p.portfolio_url
       : null;
   return (
-    <div className="page account-page">
+    <div className="page account-page public-profile">
       <p className="eyebrow">Community profile</p>
-      <h1>{p.name}</h1>
+      <div className="public-profile-heading">
+        <span className="public-profile-initials" aria-hidden="true">
+          {String(p.name)
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean)
+            .filter(
+              (_, index, parts) => index === 0 || index === parts.length - 1,
+            )
+            .map((s) => Array.from(s)[0])
+            .join("")
+            .toLocaleUpperCase()}
+        </span>
+        <h1>{p.name}</h1>
+      </div>
       <p className="submission-text">
         {p.bio || "This member hasn’t added a bio yet."}
       </p>
